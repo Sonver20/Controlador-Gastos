@@ -35,7 +35,22 @@ Toda a lógica de negócio e persistência de dados roda localmente via **SQLite
 
 ## Screenshots
 
-*(Adicione screenshots do app aqui)*
+&gt; **Como adicionar:** Salve suas imagens na pasta `screenshots/` do repositório e faça commit. Substitua os nomes abaixo pelos seus arquivos reais.
+
+### Dashboard
+![Dashboard](screenshots/DashBoard.png)
+
+### Cadastro de Despesa
+![Cadastro](screenshots/NovaDespesa.png)
+
+### Cadastro em Massa
+![Massa](screenshots/CadastroemMassa.png)
+
+### Árvore de Gastos
+![Arvore](screenshots/ArvoredeGastos.png)
+
+### Parser de Texto
+![Parser](screenshots/ParserdeTexto.png)
 
 ---
 
@@ -190,7 +205,7 @@ MIT License — livre para uso pessoal e comercial.
 
 ## Autor
 
-Feito com por [Seu Nome](https://github.com/seu-usuario).
+Feito com por [Sonver](https://github.com/Sonver20).
 
 ---
 
