@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controlador de Gastos</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Tailwind config for custom colors -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 300: '#6ee7b7', 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b' },
+                        surface: { light: '#f8fafc', dark: '#0f172a' },
+                        card:    { light: '#ffffff', dark: '#1e293b' },
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface-light dark:bg-surface-dark text-slate-800 dark:text-slate-100 transition-colors duration-300 min-h-screen flex flex-col">
+
+    <!-- ==================== HEADER ==================== -->
+    <header class="bg-primary-600 text-white shadow-lg shrink-0">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="ph ph-wallet text-3xl"></i>
+                <h1 class="text-xl font-bold tracking-tight">Controlador de Gastos</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <!-- Balance Display -->
+                <div class="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
+                    <i class="ph ph-currency-circle-dollar text-xl"></i>
+                    <div class="text-right">
+                        <p class="text-xs opacity-70 leading-none">Saldo</p>
+                        <p class="font-bold text-sm leading-tight" id="header-balance">R$ 0,00</p>
+                    </div>
+                    <button onclick="openBalanceModal()" class="p-1 rounded hover:bg-white/20 transition ml-1" title="Editar saldo">
+                        <i class="ph ph-pencil-simple text-sm"></i>
+                    </button>
+                </div>
+                <button id="btn-theme" class="p-2 rounded-lg hover:bg-white/20 transition" title="Alternar tema">
+                    <i class="ph ph-moon text-xl" id="icon-theme"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== MAIN LAYOUT ==================== -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="w-64 bg-card-light dark:bg-card-dark border-r border-slate-200 dark:border-slate-700 shrink-0 flex flex-col">
+            <nav class="p-4 space-y-1">
+                <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 font-medium" data-target="view-dashboard">
+                    <i class="ph ph-chart-pie-slice text-xl"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-register">
+                    <i class="ph ph-plus-circle text-xl"></i>
+                    <span>Nova Despesa</span>
+                </button>
+                <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-bulk">
+                    <i class="ph ph-stack text-xl"></i>
+                    <span>Cadastro em Massa</span>
+                </button>
+                <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-tree">
+                    <i class="ph ph-tree-structure text-xl"></i>
+                    <span>Arvore de Gastos</span>
+                </button>
+                <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-raw">
+                    <i class="ph ph-text-t text-xl"></i>
+                    <span>Parser de Texto</span>
+                </button>
+            </nav>
+
+            <!-- Footer info -->
+            <div class="mt-auto p-4 border-t border-slate-200 dark:border-slate-700">
+                <p class="text-xs text-slate-400 dark:text-slate-500 text-center">
+                    Controlador de Gastos v1.0<br>PyWebView Desktop
+                </p>
+            </div>
+        </aside>
+
+        <!-- CONTENT AREA -->
+        <main class="flex-1 overflow-y-auto p-6 relative">
+
+            <!-- Toast notification container -->
+            <div id="toast-container" class="fixed top-20 right-6 z-50 space-y-2 pointer-events-none"></div>
+
+            <!-- ===== VIEW: DASHBOARD ===== -->
+            <section id="view-dashboard" class="view-section space-y-6">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold">Dashboard</h2>
+                    <button onclick="loadDashboard()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Atualizar">
+                        <i class="ph ph-arrows-clockwise text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-card-light dark:bg-card-dark rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="p-2 bg-primary-100 dark:bg-primary-900/40 rounded-lg">
+                                <i class="ph ph-calendar text-primary-600 dark:text-primary-400 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-slate-500 dark:text-slate-400">Este Mes</span>
+                        </div>
+                        <p class="text-2xl font-bold" id="dash-current-month">R$ 0,00</p>
+                    </div>
+                    <div class="bg-card-light dark:bg-card-dark rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
+                                <i class="ph ph-trend-up text-amber-600 dark:text-amber-400 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-slate-500 dark:text-slate-400">Maior Categoria</span>
+                        </div>
+                        <p class="text-2xl font-bold" id="dash-top-category">-</p>
+                    </div>
+                    <div class="bg-card-light dark:bg-card-dark rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
+                                <i class="ph ph-receipt text-blue-600 dark:text-blue-400 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-slate-500 dark:text-slate-400">Total de Despesas</span>
+                        </div>
+                        <p class="text-2xl font-bold" id="dash-total-count">0</p>
+                    </div>
+                </div>
+
+                <!-- Monthly Summary Table -->
+                <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                        <h3 class="font-semibold">Resumo Mensal</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase text-slate-500 dark:text-slate-400">
+                                <tr>
+                                    <th class="px-6 py-3">Mes</th>
+                                    <th class="px-6 py-3">Despesas</th>
+                                    <th class="px-6 py-3 text-right">Total</th>
+                                    <th class="px-6 py-3 text-right">Acao</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-months-body" class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== VIEW: SINGLE REGISTRATION ===== -->
+            <section id="view-register" class="view-section hidden max-w-2xl mx-auto">
+                <h2 class="text-2xl font-bold mb-6">Nova Despesa</h2>
+                <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-5">
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Categoria</label>
+                        <div class="relative">
+                            <input type="text" id="reg-category" list="category-list" 
+                                class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                                placeholder="Ex: Alimentacao, Transporte, Moradia...">
+                            <datalist id="category-list"></datalist>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Descricao</label>
+                        <input type="text" id="reg-description"
+                            class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                            placeholder="Ex: Mercado Extra, Uber para casa...">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Valor (R$)</label>
+                        <input type="number" id="reg-amount" step="0.01" min="0"
+                            class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                            placeholder="0,00">
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="submitSingleExpense()" 
+                            class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2">
+                            <i class="ph ph-check-circle text-xl"></i>
+                            Salvar Despesa
+                        </button>
+                        <button onclick="clearRegisterForm()" 
+                            class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                            Limpar
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== VIEW: BULK REGISTRATION ===== -->
+            <section id="view-bulk" class="view-section hidden max-w-3xl mx-auto">
+                <h2 class="text-2xl font-bold mb-6">Cadastro em Massa</h2>
+                <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-5">
+
+                    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-300">
+                        <p class="font-medium mb-1"><i class="ph ph-info mr-1"></i> Formato esperado:</p>
+                        <p class="font-mono text-xs opacity-80">Descricao, Valor</p>
+                        <p class="text-xs opacity-70 mt-1">Uma despesa por linha. Ex: "Supermercado, 150.50"</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Categoria (para todas as linhas)</label>
+                        <input type="text" id="bulk-category" list="category-list"
+                            class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                            placeholder="Ex: Alimentacao">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Linhas de Despesas</label>
+                        <textarea id="bulk-lines" rows="10"
+                            class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition font-mono text-sm"
+                            placeholder="Pao de acucar, 45.30&#10;Carrefour, 120.00&#10;Padaria, 12.50"></textarea>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="submitBulkExpenses()" 
+                            class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2">
+                            <i class="ph ph-upload-simple text-xl"></i>
+                            Importar Tudo
+                        </button>
+                        <button onclick="document.getElementById('bulk-lines').value=''" 
+                            class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                            Limpar
+                        </button>
+                    </div>
+
+                    <!-- Bulk result area -->
+                    <div id="bulk-result" class="hidden"></div>
+                </div>
+            </section>
+
+            <!-- ===== VIEW: EXPENSES TREE ===== -->
+            <section id="view-tree" class="view-section hidden">
+                <h2 class="text-2xl font-bold mb-6">Arvore de Gastos</h2>
+
+                <!-- Breadcrumb -->
+                <nav class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-4" id="tree-breadcrumb">
+                    <button onclick="showMonthsList()" class="hover:text-primary-600 dark:hover:text-primary-400 transition font-medium">Meses</button>
+                </nav>
+
+                <!-- Level 1: Months -->
+                <div id="tree-months" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Level 2: Categories -->
+                <div id="tree-categories" class="hidden space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold" id="tree-cat-title"></h3>
+                        <button onclick="showMonthsList()" class="text-sm text-primary-600 hover:underline">&larr; Voltar aos meses</button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="tree-categories-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Level 3: Individual Expenses -->
+                <div id="tree-expenses" class="hidden space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold" id="tree-exp-title"></h3>
+                        <button onclick="showCategoriesForMonth()" class="text-sm text-primary-600 hover:underline">&larr; Voltar as categorias</button>
+                    </div>
+                    <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase text-slate-500 dark:text-slate-400">
+                                    <tr>
+                                        <th class="px-6 py-3">Data</th>
+                                        <th class="px-6 py-3">Descricao</th>
+                                        <th class="px-6 py-3 text-right">Valor</th>
+                                        <th class="px-6 py-3 text-center">Acoes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tree-expenses-body" class="divide-y divide-slate-200 dark:divide-slate-700">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== VIEW: RAW TEXT PARSER ===== -->
+            <section id="view-raw" class="view-section hidden max-w-3xl mx-auto">
+                <h2 class="text-2xl font-bold mb-6">Parser de Texto / Notificacoes</h2>
+                <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-5">
+
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 text-sm text-blue-800 dark:text-blue-300">
+                        <p class="font-medium mb-1"><i class="ph ph-robot mr-1"></i> Extracao automatica</p>
+                        <p class="text-xs opacity-80">Cole textos de notificacoes bancarias, extratos ou qualquer texto contendo valores. O sistema tentara extrair a descricao e o valor automaticamente.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Texto Bruto</label>
+                        <textarea id="raw-text" rows="8"
+                            class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition font-mono text-sm"
+                            placeholder="Compra no Supermercado valor R$ 150,50&#10;Pagamento de R$ 45,00 para Uber&#10;Pix para Joao - R$ 30,00"></textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button onclick="parseRawText()" 
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2">
+                            <i class="ph ph-magic-wand text-xl"></i>
+                            Analisar Texto
+                        </button>
+                    </div>
+
+                    <!-- Parsed preview -->
+                    <div id="raw-preview" class="hidden space-y-4">
+                        <div class="border-t border-slate-200 dark:border-slate-700 pt-4">
+                            <h3 class="font-semibold mb-3">Resultado da Analise</h3>
+                            <div id="raw-preview-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Categoria para salvar</label>
+                            <input type="text" id="raw-category" list="category-list"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                                placeholder="Ex: Diversos">
+                        </div>
+
+                        <button onclick="saveParsedExpenses()" 
+                            class="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2">
+                            <i class="ph ph-floppy-disk text-xl"></i>
+                            Salvar Itens Analisados
+                        </button>
+                    </div>
+
+                    <div id="raw-errors" class="hidden text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl p-4"></div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ==================== EDIT MODAL ==================== -->
+    <div id="edit-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-lg mx-4 p-6 space-y-5 transform transition-all">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold">Editar Despesa</h3>
+                <button onclick="closeEditModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="edit-id">
+
+            <div>
+                <label class="block text-sm font-medium mb-2">Categoria</label>
+                <input type="text" id="edit-category" list="category-list"
+                    class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">Descricao</label>
+                <input type="text" id="edit-description"
+                    class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">Valor (R$)</label>
+                <input type="number" id="edit-amount" step="0.01" min="0"
+                    class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="submitEdit()" 
+                    class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl transition">
+                    Salvar Alteracoes
+                </button>
+                <button onclick="closeEditModal()" 
+                    class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== DELETE CONFIRM MODAL ==================== -->
+    <div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm mx-4 p-6 text-center space-y-4">
+            <div class="w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto">
+                <i class="ph ph-trash text-2xl text-red-600 dark:text-red-400"></i>
+            </div>
+            <h3 class="text-lg font-bold">Confirmar Exclusao</h3>
+            <p class="text-slate-500 dark:text-slate-400 text-sm">Tem certeza que deseja excluir esta despesa? Esta acao nao pode ser desfeita.</p>
+            <input type="hidden" id="delete-id">
+            <div class="flex gap-3 pt-2">
+                <button onclick="confirmDelete()" 
+                    class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition">
+                    Excluir
+                </button>
+                <button onclick="closeDeleteModal()" 
+                    class="flex-1 px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== BALANCE MODAL ==================== -->
+    <div id="balance-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm mx-4 p-6 space-y-5 transform transition-all">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold">Meu Saldo & Salario</h3>
+                <button onclick="closeBalanceModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Salario atual (display so para confirmacao) -->
+            <p id="salary-display" class="text-sm text-primary-600 dark:text-primary-400 font-medium bg-primary-50 dark:bg-primary-900/20 rounded-lg px-3 py-2"></p>
+            
+            <!-- Saldo -->
+            <div>
+                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Saldo Atual (R$)</label>
+                <input type="number" id="balance-input" step="0.01"
+                    class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition"
+                    placeholder="0,00">
+            </div>
+            
+            <!-- Salario -->
+            <div>
+                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Salario Mensal (R$)</label>
+                <input type="number" id="salary-input" step="0.01"
+                    class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition"
+                    placeholder="Ex: 3000,00">
+                <p class="text-xs text-slate-400 mt-1">Credito automatico no inicio de cada mes.</p>
+            </div>
+            
+            <div class="flex gap-3 pt-2">
+                <button onclick="submitBalance()" 
+                    class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl transition">
+                    Salvar
+                </button>
+                <button onclick="closeBalanceModal()" 
+                    class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>

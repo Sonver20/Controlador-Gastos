@@ -1,0 +1,243 @@
+/**
+ * style.css - Modern dark/light UI styling for Controlador de Gastos
+ * Complements Tailwind CSS with custom animations and fine-tuned components.
+ */
+
+/* --------------------------------------------------------------------------
+   Base & Scrollbars
+   -------------------------------------------------------------------------- */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #475569;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* --------------------------------------------------------------------------
+   View transitions
+   -------------------------------------------------------------------------- */
+.view-section {
+    animation: fadeSlideIn 0.25s ease-out;
+}
+
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Form inputs - enhanced focus states
+   -------------------------------------------------------------------------- */
+input[type="text"],
+input[type="number"],
+textarea,
+select {
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+}
+
+/* --------------------------------------------------------------------------
+   Buttons - micro-interactions
+   -------------------------------------------------------------------------- */
+button {
+    transition: all 0.15s ease;
+}
+
+button:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+/* --------------------------------------------------------------------------
+   Navigation sidebar active indicator
+   -------------------------------------------------------------------------- */
+.nav-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-btn::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) scaleY(0);
+    width: 3px;
+    height: 60%;
+    background: #10b981;
+    border-radius: 0 4px 4px 0;
+    transition: transform 0.2s ease;
+}
+
+.nav-btn.bg-primary-50::before,
+.nav-btn.bg-primary-900\\/30::before {
+    transform: translateY(-50%) scaleY(1);
+}
+
+/* --------------------------------------------------------------------------
+   Table rows
+   -------------------------------------------------------------------------- */
+tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+/* --------------------------------------------------------------------------
+   Modal backdrop & content
+   -------------------------------------------------------------------------- */
+#edit-modal,
+#delete-modal {
+    animation: fadeIn 0.2s ease;
+}
+
+#edit-modal > div,
+#delete-modal > div {
+    animation: scaleIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Toast notifications
+   -------------------------------------------------------------------------- */
+#toast-container > div {
+    backdrop-filter: blur(8px);
+}
+
+/* --------------------------------------------------------------------------
+   Cards hover lift
+   -------------------------------------------------------------------------- */
+#tree-months > div,
+#tree-categories-grid > div,
+#dash-months-body tr {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#tree-months > div:hover,
+#tree-categories-grid > div:hover {
+    transform: translateY(-2px);
+}
+
+/* --------------------------------------------------------------------------
+   Spinner animation
+   -------------------------------------------------------------------------- */
+.ph-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* --------------------------------------------------------------------------
+   Number input - hide spinners for cleaner look
+   -------------------------------------------------------------------------- */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* --------------------------------------------------------------------------
+   Textarea resize
+   -------------------------------------------------------------------------- */
+textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* --------------------------------------------------------------------------
+   Selection color
+   -------------------------------------------------------------------------- */
+::selection {
+    background: rgba(16, 185, 129, 0.3);
+    color: inherit;
+}
+
+.dark ::selection {
+    background: rgba(16, 185, 129, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive adjustments
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    aside {
+        width: 100%;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        z-index: 40;
+        height: auto;
+        max-height: 60vh;
+        border-radius: 1rem 1rem 0 0;
+        transform: translateY(calc(100% - 56px));
+        transition: transform 0.3s ease;
+    }
+
+    aside.open {
+        transform: translateY(0);
+    }
+
+    main {
+        padding-bottom: 80px;
+    }
+}
