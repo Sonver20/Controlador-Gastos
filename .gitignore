@@ -1,0 +1,13 @@
+# Ambientes virtuais (Python)
+.venv/
+venv/
+ENV/
+
+gastos.db
+app_config.json
+anotacoes.txt
+
+# Arquivos temporários do Python e do sistema
+__pycache__/
+*.pyc
+.DS_Store
