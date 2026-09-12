@@ -72,7 +72,7 @@ Toda a lógica de negócio e persistência de dados roda localmente via **SQLite
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/seu-usuario/controlador-de-gastos.git
+git clone https://github.com/Sonver20/Controlador-Gastos.git
 cd controlador-de-gastos
 ```
 
