@@ -9,8 +9,10 @@ Execute com:
 
 NOTA SOBRE OS VALORES MONETARIOS NOS TESTES
 --------------------------------------------
-`Database` (database.py) trabalha e retorna `decimal.Decimal` diretamente,
-entao os testes que usam `self.db` comparam contra `Decimal("X.XX")`.
+`Database` (database.py), `FinanceService` e `SchedulerService`
+(services/) trabalham e retornam `decimal.Decimal` diretamente, entao os
+testes que usam `self.db`/`self.finance`/`self.scheduler` comparam contra
+`Decimal("X.XX")`.
 
 `Api` (app.py) e a ponte com o JavaScript: ela converte todo `Decimal` em
 string antes de retornar (pywebview serializa a resposta como JSON, que
@@ -29,7 +31,11 @@ from decimal import Decimal
 # Garante que os modulos do projeto sejam importaveis
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from database import Database, to_decimal, to_quantity, resolve_amount
+from database import Database
+from services.decimal_utils import to_decimal, to_quantity
+from services.finance import FinanceService, resolve_amount
+from services.scheduler import SchedulerService
+from services.payroll import calcular_ferias
 
 
 # =============================================================================
@@ -41,28 +47,29 @@ class TestDatabaseCRUD(unittest.TestCase):
     def setUp(self):
         """Cria um banco em memoria para cada teste."""
         self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
 
     # ------------------------------------------------------------------
     # CREATE
     # ------------------------------------------------------------------
     def test_add_expense_success(self):
-        res = self.db.add_expense("Alimentacao", "Mercado Extra", 150.50)
+        res = self.finance.add_expense("Alimentacao", "Mercado Extra", 150.50)
         self.assertTrue(res["success"])
         self.assertIsNotNone(res["id"])
         self.assertIn("sucesso", res["message"].lower())
 
     def test_add_expense_zero_amount(self):
         """Zero deve ser aceito (nao e negativo), mas e um edge case."""
-        res = self.db.add_expense("Teste", "Gratis", 0.0)
+        res = self.finance.add_expense("Teste", "Gratis", 0.0)
         self.assertTrue(res["success"])
 
     def test_add_expense_negative_amount(self):
         """A coluna DECIMAL aceita valores negativos; nossa logica nao bloqueia."""
-        res = self.db.add_expense("Teste", "Devolucao", -50.0)
+        res = self.finance.add_expense("Teste", "Devolucao", -50.0)
         self.assertTrue(res["success"])
 
     def test_add_expense_strips_whitespace(self):
-        res = self.db.add_expense("  Alimentacao  ", "  Pao  ", 5.0)
+        res = self.finance.add_expense("  Alimentacao  ", "  Pao  ", 5.0)
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(res["id"])
         self.assertEqual(fetched["data"]["category"], "Alimentacao")
@@ -70,7 +77,7 @@ class TestDatabaseCRUD(unittest.TestCase):
 
     def test_add_expense_invalid_amount(self):
         """Um valor que nao da pra converter em Decimal deve falhar de forma limpa."""
-        res = self.db.add_expense("Teste", "Ruim", "abc")
+        res = self.finance.add_expense("Teste", "Ruim", "abc")
         self.assertFalse(res["success"])
         self.assertIsNone(res["id"])
 
@@ -78,7 +85,7 @@ class TestDatabaseCRUD(unittest.TestCase):
     # READ
     # ------------------------------------------------------------------
     def test_get_expense_found(self):
-        add = self.db.add_expense("Transporte", "Uber", 23.90)
+        add = self.finance.add_expense("Transporte", "Uber", 23.90)
         res = self.db.get_expense(add["id"])
         self.assertTrue(res["success"])
         self.assertEqual(res["data"]["description"], "Uber")
@@ -89,82 +96,82 @@ class TestDatabaseCRUD(unittest.TestCase):
         res = self.db.get_expense(9999)
         self.assertFalse(res["success"])
         self.assertIsNone(res["data"])
-        self.assertIn("nao encontrada", res["message"].lower())
+        self.assertIn("não encontrada", res["message"].lower())
 
     # ------------------------------------------------------------------
     # UPDATE
     # ------------------------------------------------------------------
     def test_update_expense_success(self):
-        add = self.db.add_expense("Lazer", "Cinema", 45.0)
-        res = self.db.update_expense(add["id"], "Lazer", "Cinema IMAX", 60.0)
+        add = self.finance.add_expense("Lazer", "Cinema", 45.0)
+        res = self.finance.update_expense(add["id"], "Lazer", "Cinema IMAX", 60.0)
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(add["id"])
         self.assertEqual(fetched["data"]["description"], "Cinema IMAX")
         self.assertEqual(fetched["data"]["amount"], Decimal("60.00"))
 
     def test_update_expense_not_found(self):
-        res = self.db.update_expense(9999, "X", "Y", 1.0)
+        res = self.finance.update_expense(9999, "X", "Y", 1.0)
         self.assertFalse(res["success"])
-        self.assertIn("nao encontrada", res["message"].lower())
+        self.assertIn("não encontrada", res["message"].lower())
 
     def test_update_expense_strips_whitespace(self):
-        add = self.db.add_expense("A", "B", 1.0)
-        self.db.update_expense(add["id"], "  NovaCat  ", "  NovaDesc  ", 99.0)
+        add = self.finance.add_expense("A", "B", 1.0)
+        self.finance.update_expense(add["id"], "  NovaCat  ", "  NovaDesc  ", 99.0)
         fetched = self.db.get_expense(add["id"])
         self.assertEqual(fetched["data"]["category"], "NovaCat")
         self.assertEqual(fetched["data"]["description"], "NovaDesc")
 
     def test_update_expense_invalid_amount(self):
-        add = self.db.add_expense("A", "B", 1.0)
-        res = self.db.update_expense(add["id"], "A", "B", "abc")
+        add = self.finance.add_expense("A", "B", 1.0)
+        res = self.finance.update_expense(add["id"], "A", "B", "abc")
         self.assertFalse(res["success"])
         # o valor original nao deve ter sido alterado
         fetched = self.db.get_expense(add["id"])
         self.assertEqual(fetched["data"]["amount"], Decimal("1.00"))
 
     def test_update_expense_date(self):
-        add = self.db.add_expense("A", "B", 1.0)
+        add = self.finance.add_expense("A", "B", 1.0)
         original = self.db.get_expense(add["id"])["data"]["created_at"]
         original_time = original.split(" ", 1)[1]
 
-        res = self.db.update_expense(add["id"], "A", "B", 1.0, date_str="2026-01-15")
+        res = self.finance.update_expense(add["id"], "A", "B", 1.0, date_str="2026-01-15")
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(add["id"])
         self.assertEqual(fetched["data"]["created_at"], f"2026-01-15 {original_time}")
 
     def test_update_expense_invalid_date_format(self):
-        add = self.db.add_expense("A", "B", 1.0)
-        res = self.db.update_expense(add["id"], "A", "B", 1.0, date_str="15/01/2026")
+        add = self.finance.add_expense("A", "B", 1.0)
+        res = self.finance.update_expense(add["id"], "A", "B", 1.0, date_str="15/01/2026")
         self.assertFalse(res["success"])
         # nao deve ter alterado nada
         fetched = self.db.get_expense(add["id"])
         self.assertEqual(fetched["data"]["description"], "B")
 
     def test_update_expense_without_date_str_keeps_original_date(self):
-        add = self.db.add_expense("A", "B", 1.0)
+        add = self.finance.add_expense("A", "B", 1.0)
         original = self.db.get_expense(add["id"])["data"]["created_at"]
-        self.db.update_expense(add["id"], "A", "C", 2.0)  # sem date_str
+        self.finance.update_expense(add["id"], "A", "C", 2.0)  # sem date_str
         fetched = self.db.get_expense(add["id"])
         self.assertEqual(fetched["data"]["created_at"], original)
 
     def test_update_expense_date_not_found(self):
-        res = self.db.update_expense(9999, "A", "B", 1.0, date_str="2026-01-15")
+        res = self.finance.update_expense(9999, "A", "B", 1.0, date_str="2026-01-15")
         self.assertFalse(res["success"])
 
     # ------------------------------------------------------------------
     # DELETE
     # ------------------------------------------------------------------
     def test_delete_expense_success(self):
-        add = self.db.add_expense("Saude", "Farmacia", 35.0)
-        res = self.db.delete_expense(add["id"])
+        add = self.finance.add_expense("Saude", "Farmacia", 35.0)
+        res = self.finance.delete_expense(add["id"])
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(add["id"])
         self.assertFalse(fetched["success"])
 
     def test_delete_expense_not_found(self):
-        res = self.db.delete_expense(9999)
+        res = self.finance.delete_expense(9999)
         self.assertFalse(res["success"])
-        self.assertIn("nao encontrada", res["message"].lower())
+        self.assertIn("não encontrada", res["message"].lower())
 
 
 class TestDatabaseAggregation(unittest.TestCase):
@@ -172,11 +179,12 @@ class TestDatabaseAggregation(unittest.TestCase):
 
     def setUp(self):
         self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
         # Inserir dados de dois meses distintos
-        self.db.add_expense("Alimentacao", "Mercado", 300.0)
-        self.db.add_expense("Alimentacao", "Padaria", 50.0)
-        self.db.add_expense("Transporte", "Uber", 100.0)
-        self.db.add_expense("Transporte", "Onibus", 50.0)
+        self.finance.add_expense("Alimentacao", "Mercado", 300.0)
+        self.finance.add_expense("Alimentacao", "Padaria", 50.0)
+        self.finance.add_expense("Transporte", "Uber", 100.0)
+        self.finance.add_expense("Transporte", "Onibus", 50.0)
         # Datas futuras nao controlamos diretamente, mas como usamos
         # datetime('now') no DEFAULT, todos ficam no mes atual.
 
@@ -224,8 +232,9 @@ class TestDatabaseAggregation(unittest.TestCase):
         """Soma classica que gera erro em float (0.1 + 0.2 != 0.3) deve
         ser exata quando feita com Decimal."""
         db = Database(db_path=":memory:")
-        db.add_expense("A", "x", "0.10")
-        db.add_expense("A", "y", "0.20")
+        fin = FinanceService(db)
+        fin.add_expense("A", "x", "0.10")
+        fin.add_expense("A", "y", "0.20")
         res = db.get_months_summary()
         self.assertEqual(res["data"][0]["total"], Decimal("0.30"))
 
@@ -240,6 +249,7 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
 
     def setUp(self):
         self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
 
     # ------------------------------------------------------------------
     # resolve_amount / to_quantity
@@ -270,18 +280,18 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
     # add_expense com subcategoria
     # ------------------------------------------------------------------
     def test_add_expense_with_subcategory(self):
-        res = self.db.add_expense("Mercado", "Frango", "20.00", subcategory="Carnes")
+        res = self.finance.add_expense("Mercado", "Frango", "20.00", subcategory="Carnes")
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(res["id"])
         self.assertEqual(fetched["data"]["subcategory"], "Carnes")
 
     def test_add_expense_without_subcategory_is_none(self):
-        res = self.db.add_expense("Mercado", "Item generico", "5.00")
+        res = self.finance.add_expense("Mercado", "Item generico", "5.00")
         fetched = self.db.get_expense(res["id"])
         self.assertIsNone(fetched["data"]["subcategory"])
 
     def test_add_expense_blank_subcategory_normalizes_to_none(self):
-        res = self.db.add_expense("Mercado", "Item", "5.00", subcategory="   ")
+        res = self.finance.add_expense("Mercado", "Item", "5.00", subcategory="   ")
         fetched = self.db.get_expense(res["id"])
         self.assertIsNone(fetched["data"]["subcategory"])
 
@@ -289,7 +299,7 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
     # add_expense com quantidade x preco unitario
     # ------------------------------------------------------------------
     def test_add_expense_quantity_mode_computes_amount(self):
-        res = self.db.add_expense(
+        res = self.finance.add_expense(
             "Mercado", "Leite Integral 1L", subcategory="Laticinios", quantity="2", unit_price="4.50"
         )
         self.assertTrue(res["success"])
@@ -301,24 +311,24 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
 
     def test_add_expense_quantity_mode_fractional_weight(self):
         """Ex.: 0.750 kg de picanha a R$ 60,00 o kg."""
-        res = self.db.add_expense("Acougue", "Picanha", subcategory="Carnes", quantity="0.750", unit_price="60.00")
+        res = self.finance.add_expense("Acougue", "Picanha", subcategory="Carnes", quantity="0.750", unit_price="60.00")
         self.assertTrue(res["success"])
         self.assertEqual(res["amount"], Decimal("45.00"))
 
     def test_add_expense_default_quantity_is_one(self):
         """Modo simples (sem quantidade/preco unitario) grava quantidade=1."""
-        res = self.db.add_expense("Cat", "Item simples", "10.00")
+        res = self.finance.add_expense("Cat", "Item simples", "10.00")
         fetched = self.db.get_expense(res["id"])
         self.assertEqual(fetched["data"]["quantity"], Decimal("1"))
         self.assertEqual(fetched["data"]["unit_price"], Decimal("10.00"))
 
     def test_add_expense_quantity_mode_invalid_zero_quantity(self):
-        res = self.db.add_expense("Cat", "Item", quantity="0", unit_price="10.00")
+        res = self.finance.add_expense("Cat", "Item", quantity="0", unit_price="10.00")
         self.assertFalse(res["success"])
 
     def test_update_expense_switch_to_quantity_mode(self):
-        add = self.db.add_expense("Cat", "Item", "10.00")
-        res = self.db.update_expense(add["id"], "Cat", "Item", quantity="4", unit_price="2.50")
+        add = self.finance.add_expense("Cat", "Item", "10.00")
+        res = self.finance.update_expense(add["id"], "Cat", "Item", quantity="4", unit_price="2.50")
         self.assertTrue(res["success"])
         self.assertEqual(res["amount"], Decimal("10.00"))
         fetched = self.db.get_expense(add["id"])
@@ -330,10 +340,10 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
     # ------------------------------------------------------------------
     def test_get_subcategories_by_month_and_category(self):
         from datetime import datetime
-        self.db.add_expense("Acougue", "Picanha", subcategory="Carnes", quantity="1", unit_price="45.00")
-        self.db.add_expense("Acougue", "Frango", subcategory="Carnes", quantity="1", unit_price="20.00")
-        self.db.add_expense("Acougue", "Detergente", subcategory="Limpeza", quantity="1", unit_price="5.00")
-        self.db.add_expense("Acougue", "Sem sub", amount="3.00")
+        self.finance.add_expense("Acougue", "Picanha", subcategory="Carnes", quantity="1", unit_price="45.00")
+        self.finance.add_expense("Acougue", "Frango", subcategory="Carnes", quantity="1", unit_price="20.00")
+        self.finance.add_expense("Acougue", "Detergente", subcategory="Limpeza", quantity="1", unit_price="5.00")
+        self.finance.add_expense("Acougue", "Sem sub", amount="3.00")
 
         month = datetime.now().strftime("%Y-%m")
         res = self.db.get_subcategories_by_month_and_category(month, "Acougue")
@@ -348,8 +358,8 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
     def test_get_subcategories_when_none_used(self):
         """Categoria sem nenhuma subcategoria usada deve retornar so o balde vazio."""
         from datetime import datetime
-        self.db.add_expense("Transporte", "Uber", "20.00")
-        self.db.add_expense("Transporte", "Onibus", "5.00")
+        self.finance.add_expense("Transporte", "Uber", "20.00")
+        self.finance.add_expense("Transporte", "Onibus", "5.00")
         month = datetime.now().strftime("%Y-%m")
         res = self.db.get_subcategories_by_month_and_category(month, "Transporte")
         self.assertEqual(len(res["data"]), 1)
@@ -358,9 +368,9 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
 
     def test_get_expenses_filtered_by_subcategory(self):
         from datetime import datetime
-        self.db.add_expense("Acougue", "Picanha", subcategory="Carnes", quantity="1", unit_price="45.00")
-        self.db.add_expense("Acougue", "Frango", subcategory="Carnes", quantity="1", unit_price="20.00")
-        self.db.add_expense("Acougue", "Sem sub", amount="3.00")
+        self.finance.add_expense("Acougue", "Picanha", subcategory="Carnes", quantity="1", unit_price="45.00")
+        self.finance.add_expense("Acougue", "Frango", subcategory="Carnes", quantity="1", unit_price="20.00")
+        self.finance.add_expense("Acougue", "Sem sub", amount="3.00")
         month = datetime.now().strftime("%Y-%m")
 
         carnes = self.db.get_expenses_by_month_and_category(month, "Acougue", "Carnes")
@@ -374,10 +384,10 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
         self.assertEqual(len(todos["data"]), 3)
 
     def test_get_all_subcategories(self):
-        self.db.add_expense("Mercado", "A", subcategory="Bebidas", unit_price="1", quantity="1")
-        self.db.add_expense("Mercado", "B", subcategory="Bebidas", unit_price="1", quantity="1")
-        self.db.add_expense("Mercado", "C", subcategory="Laticinios", unit_price="1", quantity="1")
-        self.db.add_expense("Mercado", "D", amount="1.00")  # sem subcategoria
+        self.finance.add_expense("Mercado", "A", subcategory="Bebidas", unit_price="1", quantity="1")
+        self.finance.add_expense("Mercado", "B", subcategory="Bebidas", unit_price="1", quantity="1")
+        self.finance.add_expense("Mercado", "C", subcategory="Laticinios", unit_price="1", quantity="1")
+        self.finance.add_expense("Mercado", "D", amount="1.00")  # sem subcategoria
         res = self.db.get_all_subcategories()
         self.assertEqual(res["data"], ["Bebidas", "Laticinios"])
 
@@ -389,7 +399,7 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
             {"description": "Leite Integral 1L", "unit_price": "4.50", "quantity": "2"},
             {"description": "Picanha", "unit_price": "60.00", "quantity": "0.750"},
         ]
-        res = self.db.add_expenses_structured("Alimentacao", "Assai Atacadista", products)
+        res = self.finance.add_expenses_structured("Alimentacao", "Assai Atacadista", products)
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 2)
         self.assertEqual(res["total"], Decimal("54.00"))
@@ -408,7 +418,7 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
             {"description": "Sem preco", "unit_price": "", "quantity": "1"},   # sem preco
             {"description": "Qtd zero", "unit_price": "5.00", "quantity": "0"},  # qtd invalida
         ]
-        res = self.db.add_expenses_structured("Cat", None, products)
+        res = self.finance.add_expenses_structured("Cat", None, products)
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 1)
         self.assertEqual(len(res["errors"]), 3)
@@ -419,7 +429,7 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
             {"description": "A", "unit_price": "1.00", "quantity": "1"},
             {"description": "B", "unit_price": "2.00", "quantity": "1"},
         ]
-        self.db.add_expenses_structured("Mercado", "Padaria", products)
+        self.finance.add_expenses_structured("Mercado", "Padaria", products)
         from datetime import datetime
         month = datetime.now().strftime("%Y-%m")
         exps = self.db.get_expenses_by_month_and_category(month, "Mercado", "Padaria")
@@ -429,7 +439,7 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
             self.assertEqual(e["subcategory"], "Padaria")
 
     def test_add_expenses_structured_empty_list(self):
-        res = self.db.add_expenses_structured("Cat", None, [])
+        res = self.finance.add_expenses_structured("Cat", None, [])
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 0)
         self.assertEqual(res["total"], Decimal("0"))
@@ -445,27 +455,29 @@ class TestSalaryCalendar(unittest.TestCase):
 
     def setUp(self):
         self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
+        self.scheduler = SchedulerService(self.db)
 
     def test_set_next_salary_date_stores_anchor_30_days_before(self):
-        res = self.db.set_next_salary_date("2026-03-17")
+        res = self.scheduler.set_next_salary_date("2026-03-17")
         self.assertTrue(res["success"])
-        salary = self.db.get_salary()
+        salary = self.scheduler.get_salary()
         self.assertEqual(salary["last_salary_date"], "2026-02-15")
 
     def test_set_next_salary_date_invalid_format(self):
-        res = self.db.set_next_salary_date("17/03/2026")
+        res = self.scheduler.set_next_salary_date("17/03/2026")
         self.assertFalse(res["success"])
 
     def test_set_next_salary_date_preserves_balance_and_salary(self):
-        self.db.set_balance("1000.00")
-        self.db.set_salary("5000.00")
-        self.db.set_next_salary_date("2026-03-17")
-        self.assertEqual(self.db.get_balance()["balance"], Decimal("1000.00"))
-        self.assertEqual(self.db.get_salary()["salary"], Decimal("5000.00"))
+        self.finance.set_balance("1000.00")
+        self.scheduler.set_salary("5000.00")
+        self.scheduler.set_next_salary_date("2026-03-17")
+        self.assertEqual(self.finance.get_balance()["balance"], Decimal("1000.00"))
+        self.assertEqual(self.scheduler.get_salary()["salary"], Decimal("5000.00"))
 
     def test_calendar_without_reference_date(self):
-        self.db.set_salary("3000.00")
-        cal = self.db.get_salary_calendar(vacation_month=7)
+        self.scheduler.set_salary("3000.00")
+        cal = self.scheduler.get_salary_calendar(vacation_month=7)
         self.assertTrue(cal["success"])
         self.assertFalse(cal["has_reference_date"])
         self.assertEqual(cal["data"], [])
@@ -473,9 +485,9 @@ class TestSalaryCalendar(unittest.TestCase):
     def test_calendar_dates_are_exactly_30_days_apart(self):
         """O nucleo da correcao: cada data deve ser exatamente 30 dias
         apos a anterior, nao 'o mesmo dia do proximo mes'."""
-        self.db.set_salary("3000.00")
-        self.db.set_next_salary_date("2026-09-15")
-        cal = self.db.get_salary_calendar(vacation_month=1, count=6)
+        self.scheduler.set_salary("3000.00")
+        self.scheduler.set_next_salary_date("2026-09-15")
+        cal = self.scheduler.get_salary_calendar(vacation_month=1, count=6)
         self.assertTrue(cal["has_reference_date"])
         dates = [datetime.strptime(e["date"], "%Y-%m-%d") for e in cal["data"]]
         for i in range(1, len(dates)):
@@ -487,37 +499,37 @@ class TestSalaryCalendar(unittest.TestCase):
         Usa uma data no futuro (2027) para nao ser adiantada para "hoje"
         pela logica de projecao (isso e testado separadamente em
         test_calendar_projects_forward_from_past_anchor)."""
-        self.db.set_salary("3000.00")
-        self.db.set_next_salary_date("2027-02-15")
-        cal = self.db.get_salary_calendar(vacation_month=1, count=2)
+        self.scheduler.set_salary("3000.00")
+        self.scheduler.set_next_salary_date("2027-02-15")
+        cal = self.scheduler.get_salary_calendar(vacation_month=1, count=2)
         first, second = cal["data"][0]["date"], cal["data"][1]["date"]
         self.assertEqual(first, "2027-02-15")
         # 15/02/2027 + 30 dias = 17/03/2027 (2027 nao e bissexto: fev tem 28 dias)
         self.assertEqual(second, "2027-03-17")
 
     def test_calendar_marks_vacation_month_with_net_amount(self):
-        self.db.set_salary("5000.00")
-        self.db.set_next_salary_date("2026-09-15")
-        cal = self.db.get_salary_calendar(vacation_month=10, count=3)
+        self.scheduler.set_salary("5000.00")
+        self.scheduler.set_next_salary_date("2026-09-15")
+        cal = self.scheduler.get_salary_calendar(vacation_month=10, count=3)
         vacation_entries = [e for e in cal["data"] if e["is_vacation"]]
         self.assertEqual(len(vacation_entries), 1)
-        self.assertEqual(vacation_entries[0]["label"], "Ferias (liquido)")
+        self.assertEqual(vacation_entries[0]["label"], "Férias (líquido)")
         # o valor liquido de ferias deve ser diferente do salario bruto
         self.assertNotEqual(vacation_entries[0]["amount"], Decimal("5000.00"))
 
     def test_calendar_no_salary_configured_shows_none_amount(self):
-        self.db.set_next_salary_date("2026-09-15")
-        cal = self.db.get_salary_calendar(vacation_month=7, count=2)
+        self.scheduler.set_next_salary_date("2026-09-15")
+        cal = self.scheduler.get_salary_calendar(vacation_month=7, count=2)
         for e in cal["data"]:
             self.assertIsNone(e["amount"])
-            self.assertEqual(e["label"], "Nao configurado")
+            self.assertEqual(e["label"], "Não configurado")
 
     def test_calendar_projects_forward_from_past_anchor(self):
         """Se a ancora estiver no passado, a lista deve comecar na
         primeira ocorrencia igual ou posterior a hoje, nao no passado."""
-        self.db.set_salary("3000.00")
-        self.db.set_next_salary_date("2020-01-15")  # bem no passado
-        cal = self.db.get_salary_calendar(vacation_month=7, count=1)
+        self.scheduler.set_salary("3000.00")
+        self.scheduler.set_next_salary_date("2020-01-15")  # bem no passado
+        cal = self.scheduler.get_salary_calendar(vacation_month=7, count=1)
         first_date = datetime.strptime(cal["data"][0]["date"], "%Y-%m-%d")
         self.assertGreaterEqual(first_date, datetime.now().replace(hour=0, minute=0, second=0, microsecond=0))
 
@@ -527,10 +539,10 @@ class TestSalaryCalendar(unittest.TestCase):
         tem que ser exatamente essa data -- e nao um ciclo (30 dias) antes
         dela. O erro acontecia porque a ancora interna (next_date - 30)
         ja caia no futuro e era exibida diretamente, sem avancar +30."""
-        self.db.set_salary("3000.00")
+        self.scheduler.set_salary("3000.00")
         far_future = (datetime.now() + timedelta(days=60)).strftime("%Y-%m-%d")
-        self.db.set_next_salary_date(far_future)
-        cal = self.db.get_salary_calendar(vacation_month=1, count=1)
+        self.scheduler.set_next_salary_date(far_future)
+        cal = self.scheduler.get_salary_calendar(vacation_month=1, count=1)
         self.assertEqual(cal["data"][0]["date"], far_future)
 
 
@@ -589,7 +601,8 @@ class TestAdditiveColumnMigration(unittest.TestCase):
 
     def test_new_inserts_work_after_additive_migration(self):
         db = Database(db_path=self.path)
-        res = db.add_expense("Mercado", "Novo", subcategory="Bebidas", quantity="2", unit_price="3.00")
+        fin = FinanceService(db)
+        res = fin.add_expense("Mercado", "Novo", subcategory="Bebidas", quantity="2", unit_price="3.00")
         self.assertTrue(res["success"])
         self.assertEqual(res["amount"], Decimal("6.00"))
 
@@ -599,10 +612,11 @@ class TestDatabaseBulk(unittest.TestCase):
 
     def setUp(self):
         self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
 
     def test_bulk_insert_success(self):
         lines = "Mercado Extra, 150.50\nPadaria, 12.30\nFarmacia, 45.00"
-        res = self.db.add_expenses_bulk("Alimentacao", lines)
+        res = self.finance.add_expenses_bulk("Alimentacao", lines)
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 3)
         self.assertEqual(len(res["errors"]), 0)
@@ -614,37 +628,37 @@ class TestDatabaseBulk(unittest.TestCase):
         # lugar errado. Agora usa split(",", 1) (primeira virgula), que
         # trata tudo apos ela como o campo de valor.
         lines = "Pao, 5,50\nLeite, 8,30"
-        res = self.db.add_expenses_bulk("Alimentacao", lines)
+        res = self.finance.add_expenses_bulk("Alimentacao", lines)
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 2)
         self.assertEqual(res["total"], Decimal("13.80"))
 
     def test_bulk_insert_with_currency_symbol(self):
         lines = "Supermercado, R$ 200.00\nGasolina, $ 150.00"
-        res = self.db.add_expenses_bulk("Diversos", lines)
+        res = self.finance.add_expenses_bulk("Diversos", lines)
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 2)
         self.assertEqual(res["total"], Decimal("350.00"))
 
     def test_bulk_insert_invalid_line(self):
         lines = "Valido, 10.00\nLinhaInvalidaSemVirgula\nOutro, 20.00"
-        res = self.db.add_expenses_bulk("Teste", lines)
+        res = self.finance.add_expenses_bulk("Teste", lines)
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 2)
         self.assertEqual(len(res["errors"]), 1)
-        self.assertIn("Formato invalido", res["errors"][0])
+        self.assertIn("Formato inválido", res["errors"][0])
 
     def test_bulk_insert_invalid_value(self):
         lines = "Teste, abc"
-        res = self.db.add_expenses_bulk("Teste", lines)
+        res = self.finance.add_expenses_bulk("Teste", lines)
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 0)
         self.assertEqual(len(res["errors"]), 1)
-        self.assertIn("Valor invalido", res["errors"][0])
+        self.assertIn("Valor inválido", res["errors"][0])
 
     def test_bulk_insert_empty_lines_ignored(self):
         lines = "\n\nItem1, 10.00\n\nItem2, 20.00\n\n"
-        res = self.db.add_expenses_bulk("Teste", lines)
+        res = self.finance.add_expenses_bulk("Teste", lines)
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 2)
 
@@ -654,10 +668,11 @@ class TestDatabaseRawParser(unittest.TestCase):
 
     def setUp(self):
         self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
 
     def test_parse_simple_comma_format(self):
         text = "Supermercado, 150.50"
-        res = self.db.parse_raw_text(text)
+        res = self.finance.parse_raw_text(text)
         self.assertTrue(res["success"])
         self.assertEqual(len(res["parsed"]), 1)
         self.assertEqual(res["parsed"][0]["description"], "Supermercado")
@@ -665,7 +680,7 @@ class TestDatabaseRawParser(unittest.TestCase):
 
     def test_parse_notification_style(self):
         text = "Compra no Supermercado valor R$ 150,50"
-        res = self.db.parse_raw_text(text)
+        res = self.finance.parse_raw_text(text)
         self.assertTrue(res["success"])
         self.assertEqual(len(res["parsed"]), 1)
         self.assertEqual(res["parsed"][0]["amount"], Decimal("150.50"))
@@ -674,27 +689,27 @@ class TestDatabaseRawParser(unittest.TestCase):
 
     def test_parse_payment_style(self):
         text = "Pagamento de R$ 45,00 para Uber"
-        res = self.db.parse_raw_text(text)
+        res = self.finance.parse_raw_text(text)
         self.assertTrue(res["success"])
         self.assertEqual(len(res["parsed"]), 1)
         self.assertEqual(res["parsed"][0]["amount"], Decimal("45.00"))
 
     def test_parse_multiple_lines(self):
         text = "Mercado, 100.00\nUber, 25.50\nCinema, 60.00"
-        res = self.db.parse_raw_text(text)
+        res = self.finance.parse_raw_text(text)
         self.assertTrue(res["success"])
         self.assertEqual(len(res["parsed"]), 3)
 
     def test_parse_no_value_found(self):
         text = "Apenas uma descricao sem valor"
-        res = self.db.parse_raw_text(text)
+        res = self.finance.parse_raw_text(text)
         self.assertFalse(res["success"])
         self.assertEqual(len(res["parsed"]), 0)
         self.assertEqual(len(res["errors"]), 1)
 
     def test_parse_mixed_valid_invalid(self):
         text = "Valido, 10.00\nSem valor aqui\nOutro, 20.00"
-        res = self.db.parse_raw_text(text)
+        res = self.finance.parse_raw_text(text)
         self.assertTrue(res["success"])
         self.assertEqual(len(res["parsed"]), 2)
         self.assertEqual(len(res["errors"]), 1)
@@ -704,7 +719,7 @@ class TestDatabaseRawParser(unittest.TestCase):
             {"description": "Teste A", "amount": 10.0},
             {"description": "Teste B", "amount": 20.0},
         ]
-        res = self.db.save_parsed_expenses("CategoriaX", parsed)
+        res = self.finance.save_parsed_expenses("CategoriaX", parsed)
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 2)
         self.assertEqual(res["total"], Decimal("30.00"))
@@ -716,7 +731,7 @@ class TestDatabaseRawParser(unittest.TestCase):
             {"description": "Zero", "amount": 0.0},   # valor zero
             {"description": "Negativo", "amount": -1}, # valor negativo
         ]
-        res = self.db.save_parsed_expenses("Cat", parsed)
+        res = self.finance.save_parsed_expenses("Cat", parsed)
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 1)
         self.assertEqual(len(res["errors"]), 3)
@@ -727,7 +742,7 @@ class TestDatabaseRawParser(unittest.TestCase):
     def test_save_parsed_expenses_from_string_amount(self):
         """Simula o valor como chega apos ida-e-volta pelo JSON do JS."""
         parsed = [{"description": "Item", "amount": "19.99"}]
-        res = self.db.save_parsed_expenses("Cat", parsed)
+        res = self.finance.save_parsed_expenses("Cat", parsed)
         self.assertTrue(res["success"])
         self.assertEqual(res["total"], Decimal("19.99"))
 
@@ -737,22 +752,23 @@ class TestDatabaseEdgeCases(unittest.TestCase):
 
     def setUp(self):
         self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
 
     def test_very_long_description(self):
         long_desc = "A" * 1000
-        res = self.db.add_expense("Teste", long_desc, 1.0)
+        res = self.finance.add_expense("Teste", long_desc, 1.0)
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(res["id"])
         self.assertEqual(fetched["data"]["description"], long_desc)
 
     def test_special_characters_in_category(self):
-        res = self.db.add_expense("Cafe & Lanche", "Pao de queijo", 5.0)
+        res = self.finance.add_expense("Cafe & Lanche", "Pao de queijo", 5.0)
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(res["id"])
         self.assertEqual(fetched["data"]["category"], "Cafe & Lanche")
 
     def test_unicode_characters(self):
-        res = self.db.add_expense("Alimentação", "Pão de queijo ☕", 5.0)
+        res = self.finance.add_expense("Alimentação", "Pão de queijo ☕", 5.0)
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(res["id"])
         self.assertEqual(fetched["data"]["description"], "Pão de queijo ☕")
@@ -760,7 +776,7 @@ class TestDatabaseEdgeCases(unittest.TestCase):
     def test_decimal_precision_is_exact(self):
         """Antes do refactor isso exigia assertAlmostEqual por causa do
         float; agora o valor e exato, entao usamos assertEqual direto."""
-        res = self.db.add_expense("Teste", "Precisao", 10.99)
+        res = self.finance.add_expense("Teste", "Precisao", 10.99)
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(res["id"])
         self.assertEqual(fetched["data"]["amount"], Decimal("10.99"))
@@ -771,7 +787,8 @@ class TestDatabaseEdgeCases(unittest.TestCase):
             path = f.name
         try:
             db = Database(db_path=path)
-            res = db.add_expense("Teste", "Arquivo", 1.0)
+            fin = FinanceService(db)
+            res = fin.add_expense("Teste", "Arquivo", 1.0)
             self.assertTrue(res["success"])
             self.assertTrue(os.path.exists(path))
         finally:
@@ -784,7 +801,7 @@ class TestDatabaseEdgeCases(unittest.TestCase):
             path = f.name
         try:
             db1 = Database(db_path=path)
-            add = db1.add_expense("Teste", "Precisao", "1999.99")
+            add = FinanceService(db1).add_expense("Teste", "Precisao", "1999.99")
             db2 = Database(db_path=path)
             fetched = db2.get_expense(add["id"])
             self.assertEqual(fetched["data"]["amount"], Decimal("1999.99"))
@@ -800,67 +817,69 @@ class TestDatabaseBalance(unittest.TestCase):
 
     def setUp(self):
         self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
+        self.scheduler = SchedulerService(self.db)
 
     def test_get_balance_default_zero(self):
-        res = self.db.get_balance()
+        res = self.finance.get_balance()
         self.assertTrue(res["success"])
         self.assertEqual(res["balance"], Decimal("0"))
 
     def test_set_balance(self):
-        res = self.db.set_balance(1000.0)
+        res = self.finance.set_balance(1000.0)
         self.assertTrue(res["success"])
         self.assertEqual(res["balance"], Decimal("1000.00"))
-        fetched = self.db.get_balance()
+        fetched = self.finance.get_balance()
         self.assertEqual(fetched["balance"], Decimal("1000.00"))
 
     def test_set_balance_overwrites(self):
-        self.db.set_balance(500.0)
-        self.db.set_balance(200.0)
-        res = self.db.get_balance()
+        self.finance.set_balance(500.0)
+        self.finance.set_balance(200.0)
+        res = self.finance.get_balance()
         self.assertEqual(res["balance"], Decimal("200.00"))
 
     def test_subtract_from_balance(self):
-        self.db.set_balance(1000.0)
-        res = self.db.subtract_from_balance(150.50)
+        self.finance.set_balance(1000.0)
+        res = self.finance.subtract_from_balance(150.50)
         self.assertTrue(res["success"])
         self.assertEqual(res["balance"], Decimal("849.50"))
-        fetched = self.db.get_balance()
+        fetched = self.finance.get_balance()
         self.assertEqual(fetched["balance"], Decimal("849.50"))
 
     def test_subtract_from_balance_negative_result(self):
-        self.db.set_balance(50.0)
-        res = self.db.subtract_from_balance(100.0)
+        self.finance.set_balance(50.0)
+        res = self.finance.subtract_from_balance(100.0)
         self.assertTrue(res["success"])
         self.assertEqual(res["balance"], Decimal("-50.00"))
 
     def test_subtract_from_balance_no_prior_balance(self):
-        res = self.db.subtract_from_balance(100.0)
+        res = self.finance.subtract_from_balance(100.0)
         self.assertTrue(res["success"])
         self.assertEqual(res["balance"], Decimal("-100.00"))
 
     def test_set_balance_preserves_salary(self):
-        self.db.set_salary(5000.0)
-        self.db.set_balance(1000.0)
-        salary = self.db.get_salary()
+        self.scheduler.set_salary(5000.0)
+        self.finance.set_balance(1000.0)
+        salary = self.scheduler.get_salary()
         self.assertEqual(salary["salary"], Decimal("5000.00"))
 
     def test_subtract_from_balance_preserves_salary(self):
         """Bug corrigido no refactor: subtract_from_balance usava
         INSERT OR REPLACE so com a coluna 'amount', o que zerava salario
         e datas de credito a cada despesa registrada."""
-        self.db.set_salary(5000.0)
-        self.db.set_last_salary_month("2026-01")
-        self.db.subtract_from_balance(100.0)
-        salary = self.db.get_salary()
+        self.scheduler.set_salary(5000.0)
+        self.scheduler.set_last_salary_month("2026-01")
+        self.finance.subtract_from_balance(100.0)
+        salary = self.scheduler.get_salary()
         self.assertEqual(salary["salary"], Decimal("5000.00"))
         self.assertEqual(salary["last_salary_month"], "2026-01")
 
     def test_subtract_from_balance_no_float_drift_over_many_calls(self):
         """Muitas subtracoes de 0.10 nao devem acumular erro de float."""
-        self.db.set_balance("100.00")
+        self.finance.set_balance("100.00")
         for _ in range(10):
-            self.db.subtract_from_balance("0.10")
-        balance = self.db.get_balance()
+            self.finance.subtract_from_balance("0.10")
+        balance = self.finance.get_balance()
         self.assertEqual(balance["balance"], Decimal("99.00"))
 
 
@@ -872,57 +891,59 @@ class TestDatabaseSalary(unittest.TestCase):
 
     def setUp(self):
         self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
+        self.scheduler = SchedulerService(self.db)
 
     def test_get_salary_default_zero(self):
-        res = self.db.get_salary()
+        res = self.scheduler.get_salary()
         self.assertTrue(res["success"])
         self.assertEqual(res["salary"], Decimal("0"))
         self.assertIsNone(res["last_salary_month"])
 
     def test_set_salary(self):
-        res = self.db.set_salary(5000.0)
+        res = self.scheduler.set_salary(5000.0)
         self.assertTrue(res["success"])
         self.assertEqual(res["salary"], Decimal("5000.00"))
-        fetched = self.db.get_salary()
+        fetched = self.scheduler.get_salary()
         self.assertEqual(fetched["salary"], Decimal("5000.00"))
 
     def test_set_salary_preserves_balance(self):
-        self.db.set_balance(1000.0)
-        self.db.set_salary(5000.0)
-        balance = self.db.get_balance()
+        self.finance.set_balance(1000.0)
+        self.scheduler.set_salary(5000.0)
+        balance = self.finance.get_balance()
         self.assertEqual(balance["balance"], Decimal("1000.00"))
 
     def test_add_salary_to_balance(self):
-        self.db.set_balance(1000.0)
-        self.db.set_salary(5000.0)
-        res = self.db.add_salary_to_balance()
+        self.finance.set_balance(1000.0)
+        self.scheduler.set_salary(5000.0)
+        res = self.scheduler.add_salary_to_balance()
         self.assertTrue(res["success"])
         self.assertEqual(res["balance"], Decimal("6000.00"))
         self.assertEqual(res["salary"], Decimal("5000.00"))
 
     def test_add_salary_to_balance_no_salary_configured(self):
-        res = self.db.add_salary_to_balance()
+        res = self.scheduler.add_salary_to_balance()
         self.assertFalse(res["success"])
-        self.assertIn("nao configurado", res["message"].lower())
+        self.assertIn("não configurado", res["message"].lower())
 
     def test_add_salary_to_balance_zero_salary(self):
-        self.db.set_salary(0.0)
-        res = self.db.add_salary_to_balance()
+        self.scheduler.set_salary(0.0)
+        res = self.scheduler.add_salary_to_balance()
         self.assertFalse(res["success"])
 
     def test_set_last_salary_month(self):
         # Precisa criar registro na tabela balance primeiro
-        self.db.set_balance(0.0)
-        res = self.db.set_last_salary_month("2026-08")
+        self.finance.set_balance(0.0)
+        res = self.scheduler.set_last_salary_month("2026-08")
         self.assertTrue(res["success"])
-        salary = self.db.get_salary()
+        salary = self.scheduler.get_salary()
         self.assertEqual(salary["last_salary_month"], "2026-08")
 
     def test_add_salary_multiple_times(self):
-        self.db.set_salary(3000.0)
-        self.db.add_salary_to_balance()
-        self.db.add_salary_to_balance()
-        balance = self.db.get_balance()
+        self.scheduler.set_salary(3000.0)
+        self.scheduler.add_salary_to_balance()
+        self.scheduler.add_salary_to_balance()
+        balance = self.finance.get_balance()
         self.assertEqual(balance["balance"], Decimal("6000.00"))
 
 
@@ -933,7 +954,7 @@ class TestCalcularFerias(unittest.TestCase):
     """Testa o calculo de ferias (INSS/IRRF) com decimal.Decimal."""
 
     def test_returns_decimal_values(self):
-        res = Database.calcular_ferias(5000.0)
+        res = calcular_ferias(5000.0)
         self.assertTrue(res["success"])
         for key in (
             "salario_bruto", "terco_constitucional", "total_bruto", "inss",
@@ -943,7 +964,7 @@ class TestCalcularFerias(unittest.TestCase):
             self.assertIsInstance(res[key], Decimal)
 
     def test_salario_bruto_is_quantized_input(self):
-        res = Database.calcular_ferias("5000")
+        res = calcular_ferias("5000")
         self.assertEqual(res["salario_bruto"], Decimal("5000.00"))
         self.assertEqual(res["terco_constitucional"], Decimal("1666.67"))
         self.assertEqual(res["total_bruto"], Decimal("6666.67"))
@@ -951,13 +972,13 @@ class TestCalcularFerias(unittest.TestCase):
     def test_salario_liquido_never_negative_logic(self):
         """Para um salario baixo, irrf_final nao deve deixar o liquido
         maior que o total bruto nem negativo."""
-        res = Database.calcular_ferias(1500.0)
+        res = calcular_ferias(1500.0)
         self.assertTrue(res["success"])
         self.assertGreaterEqual(res["salario_liquido"], Decimal("0"))
         self.assertLessEqual(res["salario_liquido"], res["total_bruto"])
 
     def test_invalid_input(self):
-        res = Database.calcular_ferias("abc")
+        res = calcular_ferias("abc")
         self.assertFalse(res["success"])
 
 
@@ -1017,8 +1038,10 @@ class TestLegacyFloatMigration(unittest.TestCase):
 
     def test_legacy_balance_and_salary_migrated_exactly(self):
         db = Database(db_path=self.path)
-        bal = db.get_balance()
-        sal = db.get_salary()
+        fin = FinanceService(db)
+        sched = SchedulerService(db)
+        bal = fin.get_balance()
+        sal = sched.get_salary()
         self.assertEqual(bal["balance"], Decimal("1234.56"))
         self.assertEqual(sal["salary"], Decimal("5000.00"))
         self.assertEqual(sal["last_salary_month"], "2026-08")
@@ -1026,7 +1049,8 @@ class TestLegacyFloatMigration(unittest.TestCase):
 
     def test_new_inserts_after_migration_keep_incrementing_ids(self):
         db = Database(db_path=self.path)
-        res = db.add_expense("Novo", "Item novo", "10.00")
+        fin = FinanceService(db)
+        res = fin.add_expense("Novo", "Item novo", "10.00")
         self.assertTrue(res["success"])
         self.assertGreater(res["id"], 2)
 
@@ -1097,7 +1121,7 @@ class TestConnectionRollback(unittest.TestCase):
                 raise RuntimeError("erro simulado no meio da transacao")
 
         # Uma operacao seguinte, totalmente independente e valida
-        res = db.add_expense("Categoria", "Despesa valida", "5.00")
+        res = FinanceService(db).add_expense("Categoria", "Despesa valida", "5.00")
         self.assertTrue(res["success"])
 
         summary = db.get_months_summary()
@@ -1219,8 +1243,12 @@ class TestApiBridge(unittest.TestCase):
     def setUp(self):
         """Cria uma instancia da Api com um DB em memoria."""
         self.api = Api()
-        # Substituimos o db interno por um em memoria
+        # Substituimos o db interno por um em memoria, e os services
+        # precisam ser recriados apontando para ele (senao continuariam
+        # usando o banco de arquivo original criado em Api.__init__).
         self.api.db = Database(db_path=":memory:")
+        self.api.finance = FinanceService(self.api.db)
+        self.api.scheduler = SchedulerService(self.api.db)
         self.api.cfg = Config(config_path=os.path.join(tempfile.mkdtemp(), "cfg.json"))
 
     def test_api_add_expense(self):
@@ -1340,6 +1368,8 @@ class TestApiBalanceIntegration(unittest.TestCase):
     def setUp(self):
         self.api = Api()
         self.api.db = Database(db_path=":memory:")
+        self.api.finance = FinanceService(self.api.db)
+        self.api.scheduler = SchedulerService(self.api.db)
         self.api.cfg = Config(config_path=os.path.join(tempfile.mkdtemp(), "cfg.json"))
         self.api.set_balance(1000.0)
 
@@ -1386,13 +1416,19 @@ class TestApiBalanceIntegration(unittest.TestCase):
         balance = self.api.get_balance()
         self.assertEqual(balance["balance"], initial)
 
-    def test_api_delete_expense_does_not_restore_balance(self):
-        # A API nao restaura saldo ao deletar - verificamos esse comportamento
+    def test_api_delete_expense_restores_balance(self):
+        """
+        Mudanca de comportamento intencional (parte da reorganizacao para
+        services/finance.py): excluir uma despesa agora DEVOLVE o valor
+        dela ao saldo, para ficar consistente com editar (que ja ajusta o
+        saldo pela diferenca). Antes, excluir nao mexia no saldo.
+        """
         add = self.api.add_expense("Teste", "Teste", 100.0)
         balance_after_add = self.api.get_balance()["balance"]
+        self.assertEqual(balance_after_add, "900.00")
         self.api.delete_expense(add["id"])
         balance_after_del = self.api.get_balance()["balance"]
-        self.assertEqual(balance_after_del, balance_after_add)
+        self.assertEqual(balance_after_del, "1000.00")
 
     def test_api_add_expense_preserves_salary(self):
         """Regressao do bug de subtract_from_balance zerando o salario."""
@@ -1470,38 +1506,39 @@ class TestDatabaseAdditionalEdgeCases(unittest.TestCase):
 
     def setUp(self):
         self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
 
     def test_add_expense_empty_category(self):
-        res = self.db.add_expense("", "Desc", 10.0)
+        res = self.finance.add_expense("", "Desc", 10.0)
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(res["id"])
         self.assertEqual(fetched["data"]["category"], "")
 
     def test_add_expense_empty_description(self):
-        res = self.db.add_expense("Cat", "", 10.0)
+        res = self.finance.add_expense("Cat", "", 10.0)
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(res["id"])
         self.assertEqual(fetched["data"]["description"], "")
 
     def test_update_expense_to_zero(self):
-        add = self.db.add_expense("Cat", "Desc", 10.0)
-        self.db.update_expense(add["id"], "Cat", "Desc", 0.0)
+        add = self.finance.add_expense("Cat", "Desc", 10.0)
+        self.finance.update_expense(add["id"], "Cat", "Desc", 0.0)
         fetched = self.db.get_expense(add["id"])
         self.assertEqual(fetched["data"]["amount"], Decimal("0.00"))
 
     def test_parse_raw_text_empty(self):
-        res = self.db.parse_raw_text("")
+        res = self.finance.parse_raw_text("")
         self.assertTrue(res["success"])
         self.assertEqual(len(res["parsed"]), 0)
         self.assertEqual(len(res["errors"]), 0)
 
     def test_parse_raw_text_only_whitespace(self):
-        res = self.db.parse_raw_text("   \n\n   ")
+        res = self.finance.parse_raw_text("   \n\n   ")
         self.assertTrue(res["success"])
         self.assertEqual(len(res["parsed"]), 0)
 
     def test_save_parsed_expenses_empty_list(self):
-        res = self.db.save_parsed_expenses("Cat", [])
+        res = self.finance.save_parsed_expenses("Cat", [])
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 0)
 
@@ -1510,7 +1547,7 @@ class TestDatabaseAdditionalEdgeCases(unittest.TestCase):
             {"description": "", "amount": 10.0},
             {"description": "Neg", "amount": -5.0},
         ]
-        res = self.db.save_parsed_expenses("Cat", parsed)
+        res = self.finance.save_parsed_expenses("Cat", parsed)
         self.assertTrue(res["success"])
         self.assertEqual(res["inserted"], 0)
         self.assertEqual(len(res["errors"]), 2)
@@ -1531,31 +1568,32 @@ class TestDatabaseAdditionalEdgeCases(unittest.TestCase):
         self.assertEqual(res["data"], [])
 
     def test_balance_and_expense_integration(self):
-        # add_expense do Database NAO subtrai do saldo (isso so acontece na API)
-        self.db.set_balance(1000.0)
-        self.db.subtract_from_balance(200.0)
-        self.db.add_expense("Teste", "Teste", 100.0)
-        balance = self.db.get_balance()
-        self.assertEqual(balance["balance"], Decimal("800.00"))
+        # FinanceService.add_expense sempre desconta do saldo (a regra de
+        # negocio mora no service agora, nao so na camada da Api).
+        self.finance.set_balance(1000.0)
+        self.finance.subtract_from_balance(200.0)
+        self.finance.add_expense("Teste", "Teste", 100.0)
+        balance = self.finance.get_balance()
+        self.assertEqual(balance["balance"], Decimal("700.00"))
 
     def test_amount_with_many_decimals_is_rounded_half_up(self):
         """Antes precisava de assertAlmostEqual por causa do float; agora
         o valor e quantizado (ROUND_HALF_UP) de forma exata e previsivel."""
-        res = self.db.add_expense("Teste", "Precisao", 10.999)
+        res = self.finance.add_expense("Teste", "Precisao", 10.999)
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(res["id"])
         self.assertEqual(fetched["data"]["amount"], Decimal("11.00"))
 
     def test_category_case_sensitivity(self):
-        self.db.add_expense("Alimentacao", "A", 10.0)
-        self.db.add_expense("alimentacao", "B", 20.0)
+        self.finance.add_expense("Alimentacao", "A", 10.0)
+        self.finance.add_expense("alimentacao", "B", 20.0)
         cats = self.db.get_all_categories()
         self.assertEqual(len(cats["data"]), 2)
 
     def test_memory_db_isolation(self):
         db1 = Database(db_path=":memory:")
         db2 = Database(db_path=":memory:")
-        db1.add_expense("A", "B", 10.0)
+        FinanceService(db1).add_expense("A", "B", 10.0)
         self.assertEqual(len(db2.get_months_summary()["data"]), 0)
 
 

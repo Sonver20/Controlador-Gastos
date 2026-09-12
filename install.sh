@@ -29,6 +29,7 @@ USER_HOME="$HOME"
 VENV_DIR="$SCRIPT_DIR/.venv"
 APP_NAME="Controlador de Gastos"
 DESKTOP_FILE="$USER_HOME/.local/share/applications/Controlador-de-Gastos.desktop"
+ICON_PATH="$SCRIPT_DIR/icons/icon.svg"
 
 # Detecta o Python do sistema (evita snap que quebra GTK/WebKit)
 PYTHON_BIN="$(which python3 2>/dev/null || true)"
@@ -125,6 +126,8 @@ cat > "$SCRIPT_DIR/run.sh" << 'EOF'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+unset GTK_PATH GTK_EXE_PREFIX GTK_IM_MODULE_FILE GTK_MODULES
+unset GIO_MODULE_DIR GIO_LAUNCHED_DESKTOP_FILE
 "$SCRIPT_DIR/.venv/bin/python3" app.py
 EOF
 
@@ -132,26 +135,14 @@ chmod +x "$SCRIPT_DIR/run.sh"
 echo -e "${VERDE}    run.sh criado em $SCRIPT_DIR/run.sh${NC}"
 
 # -----------------------------------------------------------------------------
-# 5. Criar o icone
+# 5. Verificar o icone
 # -----------------------------------------------------------------------------
-echo -e "${AMARELO}[5/6] Criando icone do app...${NC}"
-
-cat > "$SCRIPT_DIR/icon.svg" << 'EOF'
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="128" height="128">
-  <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <rect width="100" height="100" rx="20" fill="url(#grad)"/>
-  <circle cx="50" cy="45" r="22" fill="none" stroke="white" stroke-width="4"/>
-  <text x="50" y="52" font-size="28" text-anchor="middle" fill="white" font-family="sans-serif" font-weight="bold">R$</text>
-  <rect x="28" y="68" width="44" height="6" rx="3" fill="white" opacity="0.8"/>
-</svg>
-EOF
-
-echo -e "${VERDE}    Icone criado em $SCRIPT_DIR/icon.svg${NC}"
+echo -e "${AMARELO}[5/6] Verificando icone do app...${NC}"
+if [ ! -f "$ICON_PATH" ]; then
+        echo -e "${VERMELHO}ERRO: Icone nao encontrado em $ICON_PATH${NC}"
+        exit 1
+fi
+echo -e "${VERDE}    Icone encontrado em $ICON_PATH${NC}"
 
 # -----------------------------------------------------------------------------
 # 6. Criar o arquivo .desktop (registro no menu do Ubuntu)
@@ -166,7 +157,7 @@ Version=1.0
 Name=Controlador de Gastos
 Comment=Gerenciador financeiro pessoal com PyWebView
 Exec=$SCRIPT_DIR/run.sh
-Icon=$SCRIPT_DIR/icon.svg
+Icon=$ICON_PATH
 Path=$SCRIPT_DIR
 Type=Application
 Terminal=false

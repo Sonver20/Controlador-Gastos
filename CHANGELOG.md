@@ -6,6 +6,30 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/)
 (`MAJOR.MINOR.PATCH`) a partir da versão 2.0.0.
 
+## [2.2.0] - 2026-09-11
+
+### Adicionado
+- `decimal_utils.py` e o pacote `services/` (`payroll.py`, `finance.py`,
+  `scheduler.py`), separando `database.py` em camadas: persistência pura
+  (SQL direto) vs. regras de negócio (impostos, saldo, ciclo de salário).
+
+### Corrigido
+- Excluir uma despesa agora **devolve o valor dela ao saldo** — antes não
+  mexia no saldo, o que era inconsistente com editar (que já ajusta o
+  saldo pela diferença desde a v2.0.0).
+- Diversos erros ortográficos em todo o app (textos da interface e
+  mensagens de erro): acentos faltando como "Preço", "Árvore", "Não",
+  "Salário", "Férias", "Descrição", entre outros.
+
+### Modificado
+- Paleta de cores trocada de verde (emerald) para roxo (violet) em toda
+  a interface, incluindo o ícone gerado pelo `install.sh`.
+- `database.py` reduzido de ~960 para ~590 linhas: métodos de cálculo
+  (`calcular_ferias`, `resolve_amount`) e de regra de negócio (ajuste de
+  saldo, ciclo de 30 dias) migraram para `services/`. `app.py` (`Api`)
+  agora delega para os services; leituras puras continuam batendo direto
+  em `database.py`.
+
 ## [2.1.0] - 2026-09-09
 
 ### Adicionado

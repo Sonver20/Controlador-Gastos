@@ -46,17 +46,11 @@ Toda a lógica de negócio e persistência de dados roda localmente via **SQLite
 ### Cadastro de Despesa
 ![Cadastro](screenshots/cadastro.png)
 
-### Cadastro em Massa
-![Massa](screenshots/massa.png)
-
 ### Árvore de Gastos
 ![Arvore](screenshots/arvore.png)
 
 ### Parser de Texto
-![Parser](screenshots/parser.png)
-
-### Tema Escuro
-![Dark](screenshots/dark.png)
+![Parser](screenshots/calendario.png)
 
 ---
 
@@ -122,8 +116,13 @@ Após a instalação, abra o app pelo menu do sistema: pressione `Super` e digit
 
 ```
 controlador-de-gastos/
-├── app.py              # Ponto de entrada — inicializa a janela PyWebView
-├── database.py         # Lógica SQLite (CRUD, agregações, parser)
+├── app.py              # Ponto de entrada — inicializa a janela PyWebView, expõe a Api
+├── database.py         # Camada de persistência pura (conexões, schema, SQL direto)
+├── decimal_utils.py    # Conversão para decimal.Decimal (usado por todas as camadas)
+├── services/           # Regras de negócio (nenhum SQL direto aqui)
+│   ├── payroll.py      #   Cálculo de férias, tabelas de INSS/IRRF
+│   ├── finance.py      #   Saldo, valor de despesas, listas do parser/massa
+│   └── scheduler.py    #   Ciclo de 30 dias e crédito automático de salário
 ├── config.py           # Persistência de configurações (tema, etc.)
 ├── version.py          # Versão do app (Semantic Versioning) — única fonte de verdade
 ├── index.html          # Interface SPA (HTML5 + Tailwind CSS)
@@ -137,6 +136,9 @@ controlador-de-gastos/
 ├── gastos.db           # Banco de dados SQLite (gerado automaticamente)
 └── app_config.json     # Configurações do usuário (gerado automaticamente)
 ```
+
+Veja a seção [Arquitetura](#arquitetura) abaixo para como as camadas se
+encaixam.
 
 ## Versionamento
 
@@ -161,12 +163,19 @@ automaticamente) e o histórico de mudanças fica em
 │  ┌─────────────▼───────────────────┐    │
 │  │      Python API Bridge        │    │
 │  │         (class Api)           │    │
-│  └─────────────┬───────────────────┘    │
-│                │                        │
-│  ┌─────────────▼───────────────────┐    │
-│  │    database.py  │  config.py   │    │
-│  │    (SQLite)     │  (JSON)      │    │
-│  └─────────────────────────────────┘    │
+│  └───┬─────────────┬───────────────┘    │
+│      │ leituras     │ regra de negócio  │
+│      │ puras        │                   │
+│      │      ┌───────▼───────────┐       │
+│      │      │  services/         │       │
+│      │      │  finance.py        │       │
+│      │      │  scheduler.py      │       │
+│      │      │  payroll.py        │       │
+│      │      └───────┬───────────┘       │
+│  ┌───▼──────────────▼──────┐  ┌──────┐  │
+│  │  database.py (SQLite)   │  │config│  │
+│  │  conexões, schema, SQL  │  │(JSON)│  │
+│  └──────────────────────────┘  └──────┘ │
 └─────────────────────────────────────────┘
 ```
 
@@ -200,16 +209,6 @@ Cobertura:
 | UI Framework | Tailwind CSS (CDN) |
 | Ícones | Phosphor Icons |
 
----
-
-## Roadmap
-
-- [ ] Gráficos de gastos (Chart.js)
-- [ ] Exportação para CSV/Excel
-- [ ] Categorias pré-definidas com ícones
-- [ ] Backup automático do banco de dados
-- [ ] Suporte a múltiplas contas/bancos
-- [ ] Lembrete de contas a pagar
 
 ---
 
@@ -221,7 +220,7 @@ MIT License — livre para uso pessoal e comercial.
 
 ## Autor
 
-Feito com por [Seu Nome](https://github.com/seu-usuario).
+Feito com por [Everson](https://github.com/Sonver20).
 
 ---
 

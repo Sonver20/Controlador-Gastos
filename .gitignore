@@ -6,6 +6,7 @@ ENV/
 gastos.db
 app_config.json
 anotacoes.txt
+screenshots
 
 # Arquivos temporários do Python e do sistema
 __pycache__/

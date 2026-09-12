@@ -7,15 +7,15 @@ Segue Semantic Versioning (https://semver.org/lang/pt-BR/): MAJOR.MINOR.PATCH
 
 - MAJOR: mudanca incompativel (ex.: quebra o formato do banco de dados,
   remove uma funcionalidade, muda o comportamento de algo existente)
-- MINOR: nova funcionalidade adicionada de forma compativel com o que ja
-  existia (nada quebra para quem ja usava o app)
-- PATCH: correcao de bug, sem adicionar funcionalidade nova
+- MINOR: nova funcionalidade adicionada de forma compatível com o que já
+  existia (nada quebra para quem já usava o app)
+- PATCH: correção de bug, sem adicionar funcionalidade nova
 
 Ao lancar uma nova versao, atualize APP_VERSION aqui e registre o que
 mudou em CHANGELOG.md. Esta e a UNICA fonte de verdade da versao: o
 rodape do app (index.html/script.js) busca esse valor via
-Api.get_app_version(), entao nao precisa (e nao deve) ser editado em
+Api.get_app_version(), então não precisa (e não deve) ser editado em
 mais nenhum outro lugar.
 """
 
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.2.0"

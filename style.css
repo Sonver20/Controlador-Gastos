@@ -68,13 +68,13 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
 }
 
 .dark input:focus,
 .dark textarea:focus,
 .dark select:focus {
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
 }
 
 /* --------------------------------------------------------------------------
@@ -104,7 +104,7 @@ button:active:not(:disabled) {
     transform: translateY(-50%) scaleY(0);
     width: 3px;
     height: 60%;
-    background: #10b981;
+    background: #8b5cf6;
     border-radius: 0 4px 4px 0;
     transition: transform 0.2s ease;
 }
@@ -229,7 +229,6 @@ input[type=number]::-webkit-outer-spin-button {
 
 input[type=number] {
     -moz-appearance: textfield;
-    appearance: textfield;
 }
 
 /* --------------------------------------------------------------------------
@@ -244,12 +243,12 @@ textarea {
    Selection color
    -------------------------------------------------------------------------- */
 ::selection {
-    background: rgba(16, 185, 129, 0.3);
+    background: rgba(139, 92, 246, 0.3);
     color: inherit;
 }
 
 .dark ::selection {
-    background: rgba(16, 185, 129, 0.4);
+    background: rgba(139, 92, 246, 0.4);
 }
 
 /* --------------------------------------------------------------------------

@@ -247,7 +247,7 @@ function addProductRow() {
         <input type="text" class="product-name flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
             placeholder="Nome do produto" oninput="updateProductsGrandTotal()">
         <input type="number" class="product-price w-full sm:w-28 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
-            placeholder="Preco" step="0.01" min="0" oninput="updateProductsGrandTotal()">
+            placeholder="Preço" step="0.01" min="0" oninput="updateProductsGrandTotal()">
         <div class="flex items-center gap-2 justify-center">
             <button type="button" onclick="stepProductQty('${rowId}', -1)"
                 class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
@@ -318,7 +318,7 @@ async function submitProductsExpense() {
         const priceStr = row.querySelector('.product-price').value.trim();
         const qtyStr = row.querySelector('.product-qty').value.trim();
 
-        // Linha totalmente vazia (usuario clicou em "+" e nao usou) -- ignora
+        // Linha totalmente vazia (usuário clicou em "+" e não usou) -- ignora
         if (!name && !priceStr) return;
 
         const price = parseFloat(priceStr);
@@ -331,7 +331,7 @@ async function submitProductsExpense() {
     });
 
     if (hasInvalidRow) {
-        showToast('Verifique os produtos: nome, preco e quantidade sao obrigatorios.', 'warning');
+        showToast('Verifique os produtos: nome, preço e quantidade são obrigatórios.', 'warning');
         return;
     }
     if (products.length === 0) {
@@ -351,7 +351,7 @@ async function submitProductsExpense() {
             showToast(res.message, 'error');
         }
     } catch (e) {
-        showToast('Erro de comunicacao com o backend.', 'error');
+        showToast('Erro de comunicação com o backend.', 'error');
         console.error(e);
     }
 }
@@ -368,9 +368,9 @@ function clearRegisterForm() {
 // ==========================================================================
 
 function ensureTreeViewActive() {
-    // Mostra a secao view-tree e destaca o botao correspondente no
+    // Mostra a seção view-tree e destaca o botão correspondente no
     // sidebar, SEM disparar showMonthsList() (diferente de switchView).
-    // Usado pelas funcoes internas de navegacao da arvore, que ja cuidam
+    // Usado pelas funções internas de navegação da árvore, que já cuidam
     // de mostrar o conteudo certo (meses/categorias/subcategorias/despesas)
     // por conta propria.
     document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
@@ -440,11 +440,11 @@ async function viewMonthCategories(month) {
     currentTreeHasSubcategoryLevel = false;
     updateBreadcrumb();
 
-    // Garante que a secao view-tree esteja visivel (ex.: quando chamado
+    // Garante que a seção view-tree esteja visível (ex.: quando chamado
     // a partir do Dashboard). NAO usa switchView('view-tree') aqui: essa
-    // funcao dispara showMonthsList() como efeito colateral sempre que o
+    // função dispara showMonthsList() como efeito colateral sempre que o
     // alvo e 'view-tree', o que resetava currentTreeMonth de volta para
-    // null logo apos termos acabado de defini-lo acima -- e era por isso
+    // null logo após termos acabado de defini-lo acima -- e era por isso
     // que os botoes "Voltar" da arvore paravam de funcionar depois de
     // navegar para uma categoria.
     ensureTreeViewActive();
@@ -503,9 +503,9 @@ async function viewCategorySubcategories(month, category) {
         const res = await pywebview.api.get_subcategories_by_month_and_category(month, category);
         const buckets = (res.success && res.data) ? res.data : [];
 
-        // Se a categoria nao usa subcategorias (so o balde "sem subcategoria",
+        // Se a categoria não usa subcategorias (só o balde "sem subcategoria",
         // ou nenhum dado), pula direto para a lista de despesas -- ninguem
-        // precisa de um clique extra pra categorias que nao usam o recurso.
+        // precisa de um clique extra pra categorias que não usam o recurso.
         const onlyEmptyBucket = buckets.length === 0 || (buckets.length === 1 && buckets[0].subcategory === '');
         if (onlyEmptyBucket) {
             currentTreeHasSubcategoryLevel = false;
@@ -597,7 +597,7 @@ async function viewCategoryExpenses(month, category, subcategory = null) {
             tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition';
 
             // Se a despesa foi lancada por quantidade x preco unitario
-            // (quantidade != 1), mostramos essa composicao abaixo da descricao.
+            // (quantidade != 1), mostramos essa composição abaixo da descrição.
             let descHtml = escapeHtml(exp.description);
             const qty = Number(exp.quantity);
             if (!isNaN(qty) && qty !== 1) {
@@ -660,7 +660,7 @@ async function openEditModal(id) {
     try {
         const res = await pywebview.api.get_expense(id);
         if (!res.success || !res.data) {
-            showToast('Despesa nao encontrada.', 'error');
+            showToast('Despesa não encontrada.', 'error');
             return;
         }
 
@@ -920,7 +920,7 @@ async function loadBalanceModalValues() {
             const salaryDisplay = document.getElementById('salary-display');
             if (salaryDisplay) {
                 salaryDisplay.textContent = salRes.salary > 0 
-                    ? `Salario atual: ${formatCurrency(salRes.salary)}` 
+                    ? `Salário atual: ${formatCurrency(salRes.salary)}` 
                     : 'Nenhum salario configurado';
             }
             const nextDate = computeNextSalaryDate(salRes.last_salary_date);
@@ -940,13 +940,13 @@ async function submitBalance() {
     const vacationVal = document.getElementById('vacation-month-input').value;
     const nextDateVal = document.getElementById('next-salary-date-input').value;
     
-    // String crua vai para o Python (Decimal); parseFloat aqui e so validacao.
+    // String crua vai para o Python (Decimal); parseFloat aqui é só validação.
     const balanceStr = balanceVal === '' ? '0' : balanceVal;
     const salaryStr = salaryVal === '' ? '0' : salaryVal;
     const vacationMonth = vacationVal === '' ? 7 : parseInt(vacationVal);
     
     if (isNaN(parseFloat(balanceStr)) || isNaN(parseFloat(salaryStr)) || isNaN(vacationMonth)) {
-        showToast('Informe valores validos.', 'warning');
+        showToast('Informe valores válidos.', 'warning');
         return;
     }
     
@@ -965,7 +965,7 @@ async function submitBalance() {
         }
         
         if (balRes.success && salRes.success && vacRes.success && dateRes.success) {
-            showToast('Saldo, salario e mes de ferias atualizados!', 'success');
+            showToast('Saldo, salário e mês de férias atualizados!', 'success');
             document.getElementById('header-balance').textContent = formatCurrency(balRes.balance);
             closeBalanceModal();
         } else {
@@ -1045,8 +1045,8 @@ function waitForPyWebViewAPI(callback, maxRetries = 50) {
             retries++;
             if (retries >= maxRetries) {
                 clearInterval(interval);
-                console.error('pywebview.api nao ficou disponivel a tempo.');
-                showToast('Erro de inicializacao do app.', 'error');
+                console.error('pywebview.api não ficou disponível a tempo.');
+                showToast('Erro de inicialização do app.', 'error');
             }
         }
     }, 100); // checa a cada 100ms, timeout de 5s
@@ -1128,7 +1128,7 @@ async function renderSalaryCalendar() {
             const dateLabel = `${dd}/${mm}/${yy}`;
 
             // O primeiro item da lista e sempre o proximo recebimento (a
-            // lista ja vem ordenada a partir de hoje, 30 em 30 dias).
+            // lista já vem ordenada a partir de hoje, 30 em 30 dias).
             const isNext = idx === 0;
 
             const card = document.createElement('div');
@@ -1148,8 +1148,8 @@ async function renderSalaryCalendar() {
                 <div class="flex items-center justify-between">
                     <span class="font-bold ${entry.is_vacation ? 'text-amber-700 dark:text-amber-400' : ''}">${dateLabel}</span>
                     <div class="flex gap-1.5">
-                        ${entry.is_vacation ? '<span class="text-xs bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded-full font-medium">Ferias</span>' : ''}
-                        ${isNext ? '<span class="text-xs bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full font-medium">Proximo</span>' : ''}
+                        ${entry.is_vacation ? '<span class="text-xs bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded-full font-medium">Férias</span>' : ''}
+                        ${isNext ? '<span class="text-xs bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full font-medium">Próximo</span>' : ''}
                     </div>
                 </div>
                 <div class="mt-1">
@@ -1215,7 +1215,7 @@ async function calcularFerias() {
         if (res.success) {
             resultDiv.innerHTML = `
                 <div class="space-y-2 text-sm">
-                    <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">Salario bruto:</span><span class="font-medium">${formatCurrency(res.salario_bruto)}</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">Salário bruto:</span><span class="font-medium">${formatCurrency(res.salario_bruto)}</span></div>
                     <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">1/3 constitucional:</span><span class="font-medium">${formatCurrency(res.terco_constitucional)}</span></div>
                     <div class="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-1"><span class="text-slate-500 dark:text-slate-400">Total bruto:</span><span class="font-semibold">${formatCurrency(res.total_bruto)}</span></div>
                     <div class="flex justify-between text-red-600 dark:text-red-400"><span>INSS:</span><span>-${formatCurrency(res.inss)}</span></div>
