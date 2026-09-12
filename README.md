@@ -40,6 +40,9 @@ Toda a lógica de negócio e persistência de dados roda localmente via **SQLite
 
 > **Como adicionar:** Salve suas imagens na pasta `screenshots/` do repositório e faça commit. Substitua os nomes abaixo pelos seus arquivos reais.
 
+<details>
+<summary>Ver screenshots</summary>
+
 ### Dashboard
 ![Dashboard](screenshots/dashboard.png)
 
@@ -49,8 +52,10 @@ Toda a lógica de negócio e persistência de dados roda localmente via **SQLite
 ### Árvore de Gastos
 ![Arvore](screenshots/arvore.png)
 
-### Parser de Texto
+### Calendario
 ![Parser](screenshots/calendario.png)
+
+</details>
 
 ---
 
