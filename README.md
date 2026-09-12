@@ -73,7 +73,7 @@ Toda a lógica de negócio e persistência de dados roda localmente via **SQLite
 
 ```bash
 git clone https://github.com/Sonver20/Controlador-Gastos.git
-cd controlador-de-gastos
+cd Controlador-Gastos
 ```
 
 ### 2. Instale as dependências do sistema
