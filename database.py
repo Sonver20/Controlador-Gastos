@@ -177,6 +177,29 @@ class Database:
                     )
                     """
                 )
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS monthly_groups (
+                        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name              TEXT    NOT NULL,
+                        last_applied_month TEXT
+                    )
+                    """
+                )
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS monthly_items (
+                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                        group_id    INTEGER NOT NULL,
+                        category    TEXT    NOT NULL,
+                        subcategory TEXT,
+                        description TEXT    NOT NULL,
+                        quantity    DECIMAL NOT NULL DEFAULT 1,
+                        unit_price  DECIMAL NOT NULL,
+                        FOREIGN KEY (group_id) REFERENCES monthly_groups(id) ON DELETE CASCADE
+                    )
+                    """
+                )
                 conn.commit()
         except sqlite3.Error as e:
             print(f"[DB ERROR] Failed to init tables: {e}")
@@ -213,6 +236,38 @@ class Database:
                     # Para despesas já existentes, o preço unitário "efetivo"
                     # e o proprio valor total (quantidade implicita = 1).
                     conn.execute("UPDATE expenses SET unit_price = amount WHERE unit_price IS NULL")
+                conn.commit()
+
+                # Grupos mensais: adiciona tabela e colunas faltantes para bancos
+                # antigos que ainda não tinham a funcionalidade de despesas mensais.
+                existing_tables = {
+                    row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+                }
+                if "monthly_groups" not in existing_tables:
+                    conn.execute(
+                        """
+                        CREATE TABLE monthly_groups (
+                            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name              TEXT    NOT NULL,
+                            last_applied_month TEXT
+                        )
+                        """
+                    )
+                if "monthly_items" not in existing_tables:
+                    conn.execute(
+                        """
+                        CREATE TABLE monthly_items (
+                            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                            group_id    INTEGER NOT NULL,
+                            category    TEXT    NOT NULL,
+                            subcategory TEXT,
+                            description TEXT    NOT NULL,
+                            quantity    DECIMAL NOT NULL DEFAULT 1,
+                            unit_price  DECIMAL NOT NULL,
+                            FOREIGN KEY (group_id) REFERENCES monthly_groups(id) ON DELETE CASCADE
+                        )
+                        """
+                    )
                 conn.commit()
         except sqlite3.Error as e:
             print(f"[DB MIGRATE] {e}")
@@ -536,6 +591,86 @@ class Database:
             return {"success": True, "data": [r["subcategory"] for r in rows]}
         except sqlite3.Error as e:
             return {"success": False, "data": [], "message": str(e)}
+
+    # ------------------------------------------------------------------
+    # Despesas Mensais: CRUD de grupos e itens (templates recorrentes)
+    # ------------------------------------------------------------------
+    def insert_monthly_group(self, name: str, items: List[Dict[str, Any]]) -> int:
+        """
+        Insere um grupo e seus itens na MESMA transação (atômico). Cada
+        item de `items` já chega pronto: category/subcategory/description/
+        quantity/unit_price/amount. Retorna o id do grupo criado.
+        """
+        with self._connection() as conn:
+            cursor = conn.execute("INSERT INTO monthly_groups (name) VALUES (?)", (name,))
+            group_id = cursor.lastrowid
+            for it in items:
+                conn.execute(
+                    "INSERT INTO monthly_items (group_id, category, subcategory, description, quantity, unit_price) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (group_id, it["category"], it.get("subcategory"), it["description"],
+                     it["quantity"], it["unit_price"]),
+                )
+            conn.commit()
+            return group_id
+
+    def update_monthly_group(self, group_id: int, name: str, items: List[Dict[str, Any]]) -> None:
+        """Atualiza nome e SUBSTITUI todos os itens do grupo (na mesma
+        transação). Não toca em last_applied_month."""
+        with self._connection() as conn:
+            conn.execute("UPDATE monthly_groups SET name = ? WHERE id = ?", (name, group_id))
+            conn.execute("DELETE FROM monthly_items WHERE group_id = ?", (group_id,))
+            for it in items:
+                conn.execute(
+                    "INSERT INTO monthly_items (group_id, category, subcategory, description, quantity, unit_price) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (group_id, it["category"], it.get("subcategory"), it["description"],
+                     it["quantity"], it["unit_price"]),
+                )
+            conn.commit()
+
+    def delete_monthly_group(self, group_id: int) -> None:
+        """Exclui um grupo e seus itens (a tabela `expenses` não é tocada:
+        despesas já lançadas pelo grupo permanecem no histórico)."""
+        with self._connection() as conn:
+            conn.execute("DELETE FROM monthly_items WHERE group_id = ?", (group_id,))
+            conn.execute("DELETE FROM monthly_groups WHERE id = ?", (group_id,))
+            conn.commit()
+
+    def get_monthly_groups(self) -> List[Dict[str, Any]]:
+        """Retorna todos os grupos com seus itens (quantity/unit_price
+        já convertidos para Decimal pelo detect_types)."""
+        with self._connection() as conn:
+            group_rows = conn.execute(
+                "SELECT id, name, last_applied_month FROM monthly_groups ORDER BY name"
+            ).fetchall()
+            item_rows = conn.execute(
+                "SELECT id, group_id, category, subcategory, description, quantity, unit_price "
+                "FROM monthly_items ORDER BY id"
+            ).fetchall()
+
+        items_by_group: Dict[int, List[Dict[str, Any]]] = {}
+        for r in item_rows:
+            items_by_group.setdefault(r["group_id"], []).append(dict(r))
+
+        return [
+            {
+                "id": g["id"],
+                "name": g["name"],
+                "last_applied_month": g["last_applied_month"],
+                "items": items_by_group.get(g["id"], []),
+            }
+            for g in group_rows
+        ]
+
+    def set_monthly_group_applied(self, group_id: int, month_key: str) -> None:
+        """Marca o grupo como aplicado no mês informado ("YYYY-MM")."""
+        with self._connection() as conn:
+            conn.execute(
+                "UPDATE monthly_groups SET last_applied_month = ? WHERE id = ?",
+                (month_key, group_id),
+            )
+            conn.commit()
 
     # ------------------------------------------------------------------
     # Balance: acesso bruto a linha unica da tabela `balance`

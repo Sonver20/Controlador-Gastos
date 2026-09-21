@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controlador de Gastos</title>
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Phosphor Icons -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Tailwind CSS (local, sem depender de internet) -->
+    <script src="assets/tailwind.js"></script>
+    <!-- Phosphor Icons (fonte local) -->
+    <link rel="stylesheet" href="assets/phosphor-regular.css">
     <!-- Custom styles -->
     <link rel="stylesheet" href="style.css">
     <!-- Tailwind config for custom colors -->
@@ -43,7 +43,7 @@
                         <p class="text-xs opacity-70 leading-none">Saldo</p>
                         <p class="font-bold text-sm leading-tight" id="header-balance">R$ 0,00</p>
                     </div>
-                    <button onclick="openBalanceModal()" class="p-1 rounded hover:bg-white/20 transition ml-1" title="Editar saldo">
+                    <button onclick="CG.balance.openModal()" class="p-1 rounded hover:bg-white/20 transition ml-1" title="Editar saldo">
                         <i class="ph ph-pencil-simple text-sm"></i>
                     </button>
                 </div>
@@ -68,13 +68,13 @@
                     <i class="ph ph-plus-circle text-xl"></i>
                     <span>Nova Despesa</span>
                 </button>
+                <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-monthly">
+                    <i class="ph ph-repeat text-xl"></i>
+                    <span>Despesas Mensais</span>
+                </button>
                 <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-tree">
                     <i class="ph ph-tree-structure text-xl"></i>
                     <span>Árvore de Gastos</span>
-                </button>
-                <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-raw">
-                    <i class="ph ph-text-t text-xl"></i>
-                    <span>Parser de Texto</span>
                 </button>
                 <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-calendar">
                     <i class="ph ph-calendar text-xl"></i>
@@ -100,7 +100,7 @@
             <section id="view-dashboard" class="view-section space-y-6">
                 <div class="flex items-center justify-between">
                     <h2 class="text-2xl font-bold">Dashboard</h2>
-                    <button onclick="loadDashboard()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Atualizar">
+                    <button onclick="CG.dashboard.load()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Atualizar">
                         <i class="ph ph-arrows-clockwise text-xl"></i>
                     </button>
                 </div>
@@ -184,7 +184,7 @@
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Produtos</label>
-                            <button type="button" onclick="addProductRow()"
+                            <button type="button" onclick="CG.register.addProductRow()"
                                 class="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 font-medium">
                                 <i class="ph ph-plus-circle"></i> Adicionar produto
                             </button>
@@ -200,15 +200,89 @@
                     </div>
 
                     <div class="flex gap-3 pt-2">
-                        <button onclick="submitProductsExpense()"
+                        <button onclick="CG.register.submitProductsExpense()"
                             class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2">
                             <i class="ph ph-check-circle text-xl"></i>
                             Salvar Despesa
                         </button>
-                        <button onclick="clearRegisterForm()"
+                        <button onclick="CG.register.clearRegisterForm()"
                             class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                             Limpar
                         </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== VIEW: DESPESAS MENSAIS ===== -->
+            <section id="view-monthly" class="view-section hidden space-y-6">
+
+                <!-- Listagem -->
+                <div id="monthly-list-view">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold">Despesas Mensais</h2>
+                            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Gastos fixos lançados e debitados do saldo automaticamente todo mês.</p>
+                        </div>
+                        <button onclick="CG.monthly.openForm()"
+                            class="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 px-5 rounded-xl transition flex items-center gap-2">
+                            <i class="ph ph-plus-circle text-xl"></i>
+                            Nova Despesa Mensal
+                        </button>
+                    </div>
+                    <div id="monthly-groups-list" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Formulário (novo / editar) -->
+                <div id="monthly-form-view" class="hidden max-w-4xl mx-auto">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold" id="monthly-form-title">Nova Despesa Mensal</h2>
+                        <button onclick="CG.monthly.closeForm()" class="text-sm text-primary-600 hover:underline">&larr; Voltar à lista</button>
+                    </div>
+
+                    <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-5">
+                        <div class="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl p-4 text-sm text-violet-800 dark:text-violet-300">
+                            <p class="font-medium mb-1"><i class="ph ph-info mr-1"></i> Como funciona</p>
+                            <p class="text-xs opacity-80">Cada item pode ter uma <strong>categoria diferente</strong>. Todo mês, ao abrir o app, todos os itens são lançados como despesas e o total é debitado do seu saldo automaticamente.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Nome da despesa mensal</label>
+                            <input type="text" id="monthly-group-name"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                                placeholder='Ex: Contas da casa, Assinaturas, Mercado do mês'>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Itens (cada um com sua categoria)</label>
+                                <button type="button" onclick="CG.monthly.addItemRow()"
+                                    class="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 font-medium">
+                                    <i class="ph ph-plus-circle"></i> Adicionar item
+                                </button>
+                            </div>
+                            <div id="monthly-items-list" class="space-y-3">
+                                <!-- Linhas de item inseridas via JS -->
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-4">
+                            <span class="text-sm text-slate-500 dark:text-slate-400">Total mensal</span>
+                            <span id="monthly-grand-total" class="text-xl font-bold text-primary-600 dark:text-primary-400">R$ 0,00</span>
+                        </div>
+
+                        <div class="flex gap-3 pt-2">
+                            <button onclick="CG.monthly.submitForm()"
+                                class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2">
+                                <i class="ph ph-check-circle text-xl"></i>
+                                Salvar Despesa Mensal
+                            </button>
+                            <button onclick="CG.monthly.closeForm()"
+                                class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                                Cancelar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -219,7 +293,7 @@
 
                 <!-- Breadcrumb -->
                 <nav class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-4" id="tree-breadcrumb">
-                    <button onclick="showMonthsList()" class="hover:text-primary-600 dark:hover:text-primary-400 transition font-medium">Meses</button>
+                    <button onclick="CG.tree.showMonthsList()" class="hover:text-primary-600 dark:hover:text-primary-400 transition font-medium">Meses</button>
                 </nav>
 
                 <!-- Level 1: Months -->
@@ -231,7 +305,7 @@
                 <div id="tree-categories" class="hidden space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-lg font-semibold" id="tree-cat-title"></h3>
-                        <button onclick="showMonthsList()" class="text-sm text-primary-600 hover:underline">&larr; Voltar aos meses</button>
+                        <button onclick="CG.tree.showMonthsList()" class="text-sm text-primary-600 hover:underline">&larr; Voltar aos meses</button>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="tree-categories-grid">
                         <!-- Populated by JS -->
@@ -242,7 +316,7 @@
                 <div id="tree-subcategories" class="hidden space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-lg font-semibold" id="tree-subcat-title"></h3>
-                        <button onclick="showCategoriesForMonth()" class="text-sm text-primary-600 hover:underline">&larr; Voltar às categorias</button>
+                        <button onclick="CG.tree.showCategoriesForMonth()" class="text-sm text-primary-600 hover:underline">&larr; Voltar às categorias</button>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="tree-subcategories-grid">
                         <!-- Populated by JS -->
@@ -253,7 +327,7 @@
                 <div id="tree-expenses" class="hidden space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-lg font-semibold" id="tree-exp-title"></h3>
-                        <button onclick="goBackFromExpenses()" class="text-sm text-primary-600 hover:underline">&larr; Voltar</button>
+                        <button onclick="CG.tree.goBackFromExpenses()" class="text-sm text-primary-600 hover:underline">&larr; Voltar</button>
                     </div>
                     <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                         <div class="overflow-x-auto">
@@ -275,56 +349,6 @@
                 </div>
             </section>
 
-            <!-- ===== VIEW: RAW TEXT PARSER ===== -->
-            <section id="view-raw" class="view-section hidden max-w-3xl mx-auto">
-                <h2 class="text-2xl font-bold mb-6">Parser de Texto / Notificações</h2>
-                <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-5">
-
-                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 text-sm text-blue-800 dark:text-blue-300">
-                        <p class="font-medium mb-1"><i class="ph ph-robot mr-1"></i> Extração automática</p>
-                        <p class="text-xs opacity-80">Cole textos de notificações bancárias, extratos ou qualquer texto contendo valores. O sistema tentará extrair a descrição e o valor automaticamente.</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Texto Bruto</label>
-                        <textarea id="raw-text" rows="8"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition font-mono text-sm"
-                            placeholder="Compra no Supermercado valor R$ 150,50&#10;Pagamento de R$ 45,00 para Uber&#10;Pix para João - R$ 30,00"></textarea>
-                    </div>
-
-                    <div class="flex gap-3">
-                        <button onclick="parseRawText()" 
-                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2">
-                            <i class="ph ph-magic-wand text-xl"></i>
-                            Analisar Texto
-                        </button>
-                    </div>
-
-                    <!-- Parsed preview -->
-                    <div id="raw-preview" class="hidden space-y-4">
-                        <div class="border-t border-slate-200 dark:border-slate-700 pt-4">
-                            <h3 class="font-semibold mb-3">Resultado da Análise</h3>
-                            <div id="raw-preview-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Categoria para salvar</label>
-                            <input type="text" id="raw-category" list="category-list"
-                                class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
-                                placeholder="Ex: Diversos">
-                        </div>
-
-                        <button onclick="saveParsedExpenses()" 
-                            class="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2">
-                            <i class="ph ph-floppy-disk text-xl"></i>
-                            Salvar Itens Analisados
-                        </button>
-                    </div>
-
-                    <div id="raw-errors" class="hidden text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl p-4"></div>
-                </div>
-            </section>
-
             <!-- ===== VIEW: CALENDARIO ===== -->
             <section id="view-calendar" class="view-section hidden">
                 <div class="flex items-center justify-between mb-6">
@@ -343,7 +367,7 @@
         <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-lg mx-4 p-6 space-y-5 transform transition-all">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-bold">Editar Despesa</h3>
-                <button onclick="closeEditModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                <button onclick="CG.modals.closeEdit()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                     <i class="ph ph-x text-xl"></i>
                 </button>
             </div>
@@ -375,17 +399,17 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-medium mb-2">Preço unitário (R$)</label>
-                    <input type="number" id="edit-unit-price" step="0.01" min="0" oninput="updateEditTotal()"
+                    <input type="number" id="edit-unit-price" step="0.01" min="0" oninput="CG.modals.updateEditTotal()"
                         class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-2">Quantidade</label>
                     <div class="flex items-center gap-2">
-                        <button type="button" onclick="stepEditQty(-1)"
+                        <button type="button" onclick="CG.modals.stepEditQty(-1)"
                             class="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
-                        <input type="number" id="edit-quantity" step="0.001" min="0.001" oninput="updateEditTotal()"
+                        <input type="number" id="edit-quantity" step="0.001" min="0.001" oninput="CG.modals.updateEditTotal()"
                             class="w-full text-center px-2 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
-                        <button type="button" onclick="stepEditQty(1)"
+                        <button type="button" onclick="CG.modals.stepEditQty(1)"
                             class="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">+</button>
                     </div>
                 </div>
@@ -396,11 +420,11 @@
 
 
             <div class="flex gap-3 pt-2">
-                <button onclick="submitEdit()" 
+                <button onclick="CG.modals.submitEdit()"
                     class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl transition">
                     Salvar Alterações
                 </button>
-                <button onclick="closeEditModal()" 
+                <button onclick="CG.modals.closeEdit()"
                     class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                     Cancelar
                 </button>
@@ -418,11 +442,11 @@
             <p class="text-slate-500 dark:text-slate-400 text-sm">Tem certeza que deseja excluir esta despesa? Esta ação não pode ser desfeita.</p>
             <input type="hidden" id="delete-id">
             <div class="flex gap-3 pt-2">
-                <button onclick="confirmDelete()" 
+                <button onclick="CG.modals.confirmDelete()"
                     class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition">
                     Excluir
                 </button>
-                <button onclick="closeDeleteModal()" 
+                <button onclick="CG.modals.closeDelete()"
                     class="flex-1 px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                     Cancelar
                 </button>
@@ -435,14 +459,14 @@
         <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm mx-4 p-6 space-y-5 transform transition-all">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-bold">Meu Saldo & Salário</h3>
-                <button onclick="closeBalanceModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                <button onclick="CG.balance.closeModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                     <i class="ph ph-x text-xl"></i>
                 </button>
             </div>
-            
+
             <!-- Salário atual (display só para confirmação) -->
             <p id="salary-display" class="text-sm text-primary-600 dark:text-primary-400 font-medium bg-primary-50 dark:bg-primary-900/20 rounded-lg px-3 py-2"></p>
-            
+
             <!-- Saldo -->
             <div>
                 <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Saldo Atual (R$)</label>
@@ -450,7 +474,7 @@
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition"
                     placeholder="0,00">
             </div>
-            
+
             <!-- Salário -->
             <div>
                 <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Salário Mensal (R$)</label>
@@ -488,13 +512,13 @@
                 </select>
                 <p class="text-xs text-slate-400 mt-1">No calendário, o recebimento que cair nesse mês mostrará o valor líquido das férias.</p>
             </div>
-            
+
             <div class="flex gap-3 pt-2">
-                <button onclick="submitBalance()" 
+                <button onclick="CG.balance.submit()"
                     class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl transition">
                     Salvar
                 </button>
-                <button onclick="closeBalanceModal()" 
+                <button onclick="CG.balance.closeModal()"
                     class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                     Cancelar
                 </button>
@@ -507,7 +531,7 @@
         <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md mx-4 p-6 space-y-4 transform transition-all">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-bold">Calcular Férias</h3>
-                <button onclick="closeFeriasModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                <button onclick="CG.calendar.closeFeriasModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                     <i class="ph ph-x text-xl"></i>
                 </button>
             </div>
@@ -516,12 +540,24 @@
                 <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Salário bruto (R$)</label>
                 <input type="number" id="ferias-salario-input" step="0.01" class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition" placeholder="5000.00">
             </div>
-            <button onclick="calcularFerias()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition">Calcular</button>
+            <button onclick="CG.calendar.calcularFerias()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition">Calcular</button>
             <div id="ferias-result" class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700"></div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="script.js"></script>
+    <!-- Scripts (módulos) -->
+    <script src="scripts/core/utils.js"></script>
+    <script src="scripts/core/state.js"></script>
+    <script src="scripts/core/api.js"></script>
+    <script src="scripts/core/theme.js"></script>
+    <script src="scripts/core/toast.js"></script>
+    <script src="scripts/features/dashboard.js"></script>
+    <script src="scripts/features/register.js"></script>
+    <script src="scripts/features/monthly.js"></script>
+    <script src="scripts/features/tree.js"></script>
+    <script src="scripts/features/balance.js"></script>
+    <script src="scripts/features/calendar.js"></script>
+    <script src="scripts/features/modals.js"></script>
+    <script src="scripts/main.js"></script>
 </body>
 </html>

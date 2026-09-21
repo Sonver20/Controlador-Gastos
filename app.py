@@ -20,6 +20,7 @@ from config import Config
 from version import APP_VERSION
 from services.finance import FinanceService
 from services.scheduler import SchedulerService
+from services.monthly import MonthlyService
 from services.payroll import calcular_ferias
 
 
@@ -61,6 +62,7 @@ class Api:
         self.cfg = Config(config_path=asset_path("app_config.json"))
         self.finance = FinanceService(self.db)
         self.scheduler = SchedulerService(self.db)
+        self.monthly = MonthlyService(self.db, self.finance)
 
     def get_app_version(self):
         return {"success": True, "version": APP_VERSION}
@@ -161,6 +163,31 @@ class Api:
     @jsonify_result
     def save_parsed_expenses(self, category: str, parsed_list: list):
         return self.finance.save_parsed_expenses(category, parsed_list)
+
+    # ------------------------------------------------------------------
+    # Despesas Mensais (services/monthly.py) — templates recorrentes
+    # ------------------------------------------------------------------
+    @jsonify_result
+    def get_monthly_groups(self):
+        return self.monthly.list_groups()
+
+    @jsonify_result
+    def save_monthly_group(self, name: str, items: list, group_id=None):
+        if group_id is not None:
+            return self.monthly.update_group(int(group_id), name, items)
+        return self.monthly.create_group(name, items)
+
+    @jsonify_result
+    def delete_monthly_group(self, group_id: int):
+        return self.monthly.delete_group(int(group_id))
+
+    @jsonify_result
+    def apply_monthly_group(self, group_id: int):
+        return self.monthly.apply_group(int(group_id))
+
+    @jsonify_result
+    def check_monthly_expenses(self):
+        return self.monthly.check_and_apply()
 
     # ------------------------------------------------------------------
     # Despesas: leitura pura (database.py direto -- sem regra de negocio)

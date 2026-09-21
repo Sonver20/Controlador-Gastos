@@ -6,6 +6,33 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/)
 (`MAJOR.MINOR.PATCH`) a partir da versão 2.0.0.
 
+## [3.0.0] - 2026-09-21
+
+### Adicionado
+- **Despesas Mensais**: templates de gastos recorrentes (novas tabelas
+  `monthly_groups`/`monthly_items` + `services/monthly.py` + view própria
+  no frontend). Cada item tem sua própria categoria/subcategoria (diferente
+  da Nova Despesa, que compartilha uma categoria). Todo mês, ao abrir o
+  app, os grupos pendentes são lançados como despesas e o total é debitado
+  do saldo automaticamente (`check_monthly_expenses`); também é possível
+  aplicar manualmente com "Aplicar agora".
+
+### Removido
+- **Parser de Texto / Notificações**: a extração automática de descrição +
+  valor a partir de texto colado não funcionava bem na prática e foi
+  removida (view, navegação, métodos `parse_raw_text` e
+  `save_parsed_expenses` da Api e do FinanceService, e testes).
+
+### Modificado
+- Frontend modularizado: o monólito `script.js` foi dividido em
+  `scripts/core/` (`api.js` com retry/timeout, `state.js`, `utils.js`,
+  `theme.js`, `toast.js`), `scripts/features/` (`dashboard.js`,
+  `register.js`, `monthly.js`, `tree.js`, `balance.js`, `calendar.js`,
+  `modals.js`) e `scripts/main.js` (navegação, atalhos, init), todos sob o
+  namespace `window.CG`.
+- Dependências baixadas para `assets/` (Tailwind CSS e fonte Phosphor
+  Icons com CSS local): o app não precisa mais de internet para abrir.
+
 ## [2.2.0] - 2026-09-11
 
 ### Adicionado
