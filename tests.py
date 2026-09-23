@@ -722,90 +722,6 @@ class TestDatabaseBulk(unittest.TestCase):
         self.assertEqual(res["inserted"], 2)
 
 
-class TestDatabaseRawParser(unittest.TestCase):
-    """Testa o parser de texto bruto / notificacoes."""
-
-    def setUp(self):
-        self.db = Database(db_path=":memory:")
-        self.finance = FinanceService(self.db)
-
-    def test_parse_simple_comma_format(self):
-        text = "Supermercado, 150.50"
-        res = self.finance.parse_raw_text(text)
-        self.assertTrue(res["success"])
-        self.assertEqual(len(res["parsed"]), 1)
-        self.assertEqual(res["parsed"][0]["description"], "Supermercado")
-        self.assertEqual(res["parsed"][0]["amount"], Decimal("150.50"))
-
-    def test_parse_notification_style(self):
-        text = "Compra no Supermercado valor R$ 150,50"
-        res = self.finance.parse_raw_text(text)
-        self.assertTrue(res["success"])
-        self.assertEqual(len(res["parsed"]), 1)
-        self.assertEqual(res["parsed"][0]["amount"], Decimal("150.50"))
-        # Descricao deve ter sido limpa dos prefixos
-        self.assertIn("Supermercado", res["parsed"][0]["description"])
-
-    def test_parse_payment_style(self):
-        text = "Pagamento de R$ 45,00 para Uber"
-        res = self.finance.parse_raw_text(text)
-        self.assertTrue(res["success"])
-        self.assertEqual(len(res["parsed"]), 1)
-        self.assertEqual(res["parsed"][0]["amount"], Decimal("45.00"))
-
-    def test_parse_multiple_lines(self):
-        text = "Mercado, 100.00\nUber, 25.50\nCinema, 60.00"
-        res = self.finance.parse_raw_text(text)
-        self.assertTrue(res["success"])
-        self.assertEqual(len(res["parsed"]), 3)
-
-    def test_parse_no_value_found(self):
-        text = "Apenas uma descricao sem valor"
-        res = self.finance.parse_raw_text(text)
-        self.assertFalse(res["success"])
-        self.assertEqual(len(res["parsed"]), 0)
-        self.assertEqual(len(res["errors"]), 1)
-
-    def test_parse_mixed_valid_invalid(self):
-        text = "Valido, 10.00\nSem valor aqui\nOutro, 20.00"
-        res = self.finance.parse_raw_text(text)
-        self.assertTrue(res["success"])
-        self.assertEqual(len(res["parsed"]), 2)
-        self.assertEqual(len(res["errors"]), 1)
-
-    def test_save_parsed_expenses(self):
-        parsed = [
-            {"description": "Teste A", "amount": 10.0},
-            {"description": "Teste B", "amount": 20.0},
-        ]
-        res = self.finance.save_parsed_expenses("CategoriaX", parsed)
-        self.assertTrue(res["success"])
-        self.assertEqual(res["inserted"], 2)
-        self.assertEqual(res["total"], Decimal("30.00"))
-
-    def test_save_parsed_expenses_skips_invalid(self):
-        parsed = [
-            {"description": "Valido", "amount": 10.0},
-            {"description": "", "amount": 5.0},       # sem descricao
-            {"description": "Zero", "amount": 0.0},   # valor zero
-            {"description": "Negativo", "amount": -1}, # valor negativo
-        ]
-        res = self.finance.save_parsed_expenses("Cat", parsed)
-        self.assertTrue(res["success"])
-        self.assertEqual(res["inserted"], 1)
-        self.assertEqual(len(res["errors"]), 3)
-        # total deve refletir apenas o item realmente inserido (10.00),
-        # nao a soma de tudo que foi enviado (bug corrigido no refactor)
-        self.assertEqual(res["total"], Decimal("10.00"))
-
-    def test_save_parsed_expenses_from_string_amount(self):
-        """Simula o valor como chega apos ida-e-volta pelo JSON do JS."""
-        parsed = [{"description": "Item", "amount": "19.99"}]
-        res = self.finance.save_parsed_expenses("Cat", parsed)
-        self.assertTrue(res["success"])
-        self.assertEqual(res["total"], Decimal("19.99"))
-
-
 class TestDatabaseEdgeCases(unittest.TestCase):
     """Testa casos de borda e robustez."""
 
@@ -1387,18 +1303,6 @@ class TestApiBridge(unittest.TestCase):
         fetched = self.api.get_expense(add["id"])
         self.assertFalse(fetched["success"])
 
-    def test_api_parse_raw_text(self):
-        res = self.api.parse_raw_text("Mercado, 100.00")
-        self.assertTrue(res["success"])
-        self.assertEqual(len(res["parsed"]), 1)
-        self.assertEqual(res["parsed"][0]["amount"], "100.00")
-
-    def test_api_save_parsed_expenses(self):
-        parsed = [{"description": "Auto", "amount": 50.0}]
-        res = self.api.save_parsed_expenses("Transporte", parsed)
-        self.assertTrue(res["success"])
-        self.assertEqual(res["inserted"], 1)
-
     def test_api_get_all_categories(self):
         self.api.add_expense("A", "B", 1.0)
         self.api.add_expense("A", "C", 2.0)
@@ -1476,26 +1380,6 @@ class TestApiBalanceIntegration(unittest.TestCase):
         self.api.add_expenses_bulk("Teste", lines)
         balance = self.api.get_balance()
         self.assertEqual(balance["balance"], "920.00")
-
-    def test_api_save_parsed_expenses_subtracts_total(self):
-        parsed = [
-            {"description": "Auto", "amount": 100.0},
-            {"description": "Gas", "amount": 50.0},
-        ]
-        self.api.save_parsed_expenses("Transporte", parsed)
-        balance = self.api.get_balance()
-        self.assertEqual(balance["balance"], "850.00")
-
-    def test_api_save_parsed_expenses_only_subtracts_valid_items(self):
-        """Bug corrigido: antes a API somava TODOS os itens enviados para
-        subtrair do saldo, mesmo os que o banco rejeitou (ex.: negativos)."""
-        parsed = [
-            {"description": "Valido", "amount": 100.0},
-            {"description": "Invalido", "amount": -999.0},
-        ]
-        self.api.save_parsed_expenses("Cat", parsed)
-        balance = self.api.get_balance()
-        self.assertEqual(balance["balance"], "900.00")
 
     def test_api_add_expense_zero_does_not_change_balance(self):
         initial = self.api.get_balance()["balance"]
@@ -1613,32 +1497,6 @@ class TestDatabaseAdditionalEdgeCases(unittest.TestCase):
         fetched = self.db.get_expense(add["id"])
         self.assertEqual(fetched["data"]["amount"], Decimal("0.00"))
 
-    def test_parse_raw_text_empty(self):
-        res = self.finance.parse_raw_text("")
-        self.assertTrue(res["success"])
-        self.assertEqual(len(res["parsed"]), 0)
-        self.assertEqual(len(res["errors"]), 0)
-
-    def test_parse_raw_text_only_whitespace(self):
-        res = self.finance.parse_raw_text("   \n\n   ")
-        self.assertTrue(res["success"])
-        self.assertEqual(len(res["parsed"]), 0)
-
-    def test_save_parsed_expenses_empty_list(self):
-        res = self.finance.save_parsed_expenses("Cat", [])
-        self.assertTrue(res["success"])
-        self.assertEqual(res["inserted"], 0)
-
-    def test_save_parsed_expenses_all_invalid(self):
-        parsed = [
-            {"description": "", "amount": 10.0},
-            {"description": "Neg", "amount": -5.0},
-        ]
-        res = self.finance.save_parsed_expenses("Cat", parsed)
-        self.assertTrue(res["success"])
-        self.assertEqual(res["inserted"], 0)
-        self.assertEqual(len(res["errors"]), 2)
-
     def test_get_months_summary_empty_db(self):
         res = self.db.get_months_summary()
         self.assertTrue(res["success"])
@@ -1697,7 +1555,6 @@ if __name__ == "__main__":
     suite.addTests(loader.loadTestsFromTestCase(TestSubcategoryAndQuantity))
     suite.addTests(loader.loadTestsFromTestCase(TestAdditiveColumnMigration))
     suite.addTests(loader.loadTestsFromTestCase(TestDatabaseBulk))
-    suite.addTests(loader.loadTestsFromTestCase(TestDatabaseRawParser))
     suite.addTests(loader.loadTestsFromTestCase(TestDatabaseEdgeCases))
     suite.addTests(loader.loadTestsFromTestCase(TestDatabaseBalance))
     suite.addTests(loader.loadTestsFromTestCase(TestDatabaseSalary))

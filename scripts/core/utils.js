@@ -6,7 +6,12 @@ window.CG = window.CG || {};
 
 CG.utils = (function () {
     function formatCurrency(value) {
-        return new Intl.NumberFormat('pt-BR', {
+        // O valor continua em Reais (BRL) independente do idioma da
+        // interface — é o que o app calcula e o que está no banco. O que
+        // muda em inglês é só a convenção de separador de milhar/decimal
+        // (1.234,56 em pt-BR vira 1,234.56 em en-US), via Intl.
+        const locale = (window.CG && CG.i18n) ? CG.i18n.locale() : 'pt-BR';
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency: 'BRL'
         }).format(value || 0);
@@ -14,8 +19,10 @@ CG.utils = (function () {
 
     function formatQuantity(value) {
         const n = Number(value) || 0;
-        // Mostra ate 3 casas decimais, mas sem zeros a mais (2 -> "2", 0.750 -> "0,75")
-        return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 }).format(n);
+        // Mostra ate 3 casas decimais, mas sem zeros a mais (2 -> "2", 0.750 -> "0,75" em
+        // pt-BR / "0.75" em en-US).
+        const locale = (window.CG && CG.i18n) ? CG.i18n.locale() : 'pt-BR';
+        return new Intl.NumberFormat(locale, { maximumFractionDigits: 3 }).format(n);
     }
 
     function formatMonth(yyyymm) {
@@ -28,18 +35,23 @@ CG.utils = (function () {
     function formatDateTime(isoString) {
         if (!isoString) return '-';
         const date = new Date(isoString.replace(' ', 'T'));
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = String(date.getFullYear()).slice(-2);
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${day}/${month}/${year} ${hours}:${minutes}`;
+        const locale = (window.CG && CG.i18n) ? CG.i18n.locale() : 'pt-BR';
+        // Data e hora formatadas separadamente (e depois unidas com espaço)
+        // pra manter o mesmo estilo visual anterior ("23/09/26 14:05"),
+        // mas cada uma seguindo a ordem/convenção do idioma atual:
+        // pt-BR -> "23/09/26 14:05" (24h) / en-US -> "09/23/26 2:05 PM" (12h).
+        const datePart = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: '2-digit' }).format(date);
+        const timePart = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date);
+        return `${datePart} ${timePart}`;
     }
 
     function formatDateBR(dateStr) {
         if (!dateStr) return '-';
         const [y, m, d] = dateStr.split('-');
-        return `${d}/${m}/${y.slice(-2)}`;
+        const date = new Date(Number(y), Number(m) - 1, Number(d));
+        const locale = (window.CG && CG.i18n) ? CG.i18n.locale() : 'pt-BR';
+        // pt-BR -> "23/09/26" / en-US -> "09/23/26"
+        return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: '2-digit' }).format(date);
     }
 
     function currentMonthKey() {

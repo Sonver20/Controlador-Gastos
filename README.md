@@ -59,11 +59,11 @@ moderna com tema claro/escuro, animações suaves e navegação intuitiva.
 ### Nova Despesa
 ![Nova Despesa](screenshots/cadastro.png)
 
-### Árvore de Gastos
-![Árvore de Gastos](screenshots/arvore.png)
-
 ### Despesas Mensais
 ![Despesas Mensais](screenshots/mensais.png)
+
+### Árvore de Gastos
+![Árvore de Gastos](screenshots/arvore.png)
 
 ### Calendário de Salários
 ![Calendário](screenshots/calendario.png)

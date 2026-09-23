@@ -18,7 +18,11 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/)
   frontend para traduzir o toast (cai para o texto em português já
   existente quando a chave não é reconhecida, então nada quebra).
   `config.py` ganha `get_language`/`set_language`. `README.en.md`
-  criado, com link cruzado a partir do `README.md`.
+  criado, com link cruzado a partir do `README.md`. Valores em dinheiro
+  continuam em Reais (R$) nos dois idiomas — o que muda em inglês é só
+  a convenção de separador decimal/milhar (1.234,56 → 1,234.56) e a
+  ordem/formato de datas e horas (23/09/26 14:05 → 09/23/26 02:05 PM),
+  via `Intl.NumberFormat`/`Intl.DateTimeFormat`.
 - **Cor principal personalizável**: no mesmo painel de Configurações,
   5 paletas prontas (roxo/violeta — padrão e cor histórica do app, azul,
   verde, vermelho, laranja) ou uma cor customizada via seletor de cor,

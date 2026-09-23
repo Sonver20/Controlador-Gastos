@@ -13,7 +13,6 @@ impostos), delega para o servico correspondente em services/.
 import os
 from decimal import Decimal
 from functools import wraps
-
 import webview
 from database import Database
 from config import Config
@@ -167,14 +166,6 @@ class Api:
     @jsonify_result
     def delete_expense(self, expense_id: int):
         return self.finance.delete_expense(expense_id)
-
-    @jsonify_result
-    def parse_raw_text(self, raw_text: str):
-        return self.finance.parse_raw_text(raw_text)
-
-    @jsonify_result
-    def save_parsed_expenses(self, category: str, parsed_list: list):
-        return self.finance.save_parsed_expenses(category, parsed_list)
 
     # ------------------------------------------------------------------
     # Despesas Mensais (services/monthly.py) — templates recorrentes
