@@ -44,13 +44,13 @@ class SchedulerService:
         try:
             amt = to_decimal(amount)
         except (InvalidOperation, ValueError, TypeError):
-            return {"success": False, "message": f"Valor invalido: '{amount}'"}
+            return {"success": False, "message": f"Valor invalido: '{amount}'", "key": "validation.invalid_value", "params": {"value": str(amount)}}
         try:
             row = self.db.fetch_balance_row()
             self.db.save_balance_row(row["amount"], amt, row["last_salary_month"], row["last_salary_date"])
-            return {"success": True, "salary": amt, "message": "Salário configurado."}
+            return {"success": True, "salary": amt, "message": "Salário configurado.", "key": "salary.configured"}
         except sqlite3.Error as e:
-            return {"success": False, "message": f"Erro ao configurar salário: {e}"}
+            return {"success": False, "message": f"Erro ao configurar salário: {e}", "key": "salary.configure_error", "params": {"error": str(e)}}
 
     def add_salary_to_balance(self) -> Dict[str, Any]:
         """Credita o salario configurado no saldo e registra a data de hoje
@@ -58,7 +58,7 @@ class SchedulerService:
         try:
             row = self.db.fetch_balance_row()
             if row["salary"] <= 0:
-                return {"success": False, "message": "Salário não configurado."}
+                return {"success": False, "message": "Salário não configurado.", "key": "salary.not_configured"}
             new_balance = row["amount"] + row["salary"]
             today_str = datetime.now().strftime("%Y-%m-%d")
             self.db.save_balance_row(new_balance, row["salary"], row["last_salary_month"], today_str)
@@ -67,9 +67,11 @@ class SchedulerService:
                 "balance": new_balance,
                 "salary": row["salary"],
                 "message": f"Salário de R$ {row['salary']:.2f} creditado.",
+                "key": "salary.credited",
+                "params": {"amount": row["salary"]},
             }
         except sqlite3.Error as e:
-            return {"success": False, "message": f"Erro ao creditar salário: {e}"}
+            return {"success": False, "message": f"Erro ao creditar salário: {e}", "key": "salary.credit_error", "params": {"error": str(e)}}
 
     def check_auto_salary(self) -> Dict[str, Any]:
         """Verifica se passaram 30 dias desde o ultimo credito de salario
@@ -83,7 +85,8 @@ class SchedulerService:
             if not last_date_str:
                 # Nunca creditado — credita na primeira vez que abrir o app
                 credit_res = self.add_salary_to_balance()
-                return {"success": True, "should_credit": True, "days_remaining": 0, "message": credit_res["message"]}
+                return {"success": True, "should_credit": True, "days_remaining": 0, "message": credit_res["message"],
+                        "key": credit_res.get("key"), "params": credit_res.get("params")}
 
             last_date = datetime.strptime(last_date_str, "%Y-%m-%d")
             today = datetime.now()
@@ -91,7 +94,8 @@ class SchedulerService:
 
             if days_passed >= 30:
                 credit_res = self.add_salary_to_balance()
-                return {"success": True, "should_credit": True, "days_remaining": 0, "days_passed": days_passed, "message": credit_res["message"]}
+                return {"success": True, "should_credit": True, "days_remaining": 0, "days_passed": days_passed, "message": credit_res["message"],
+                        "key": credit_res.get("key"), "params": credit_res.get("params")}
 
             return {"success": True, "should_credit": False, "days_remaining": 30 - days_passed, "days_passed": days_passed}
         except Exception as e:
@@ -119,14 +123,14 @@ class SchedulerService:
         try:
             next_date = datetime.strptime(date_str, "%Y-%m-%d")
         except (ValueError, TypeError):
-            return {"success": False, "message": "Data inválida."}
+            return {"success": False, "message": "Data inválida.", "key": "validation.invalid_date"}
         anchor = (next_date - timedelta(days=30)).strftime("%Y-%m-%d")
         try:
             row = self.db.fetch_balance_row()
             self.db.save_balance_row(row["amount"], row["salary"], row["last_salary_month"], anchor)
-            return {"success": True, "next_salary_date": date_str, "message": "Data de recebimento atualizada."}
+            return {"success": True, "next_salary_date": date_str, "message": "Data de recebimento atualizada.", "key": "salary.next_date_updated"}
         except sqlite3.Error as e:
-            return {"success": False, "message": f"Erro ao atualizar data: {e}"}
+            return {"success": False, "message": f"Erro ao atualizar data: {e}", "key": "salary.next_date_error", "params": {"error": str(e)}}
 
     def get_salary_calendar(self, vacation_month: int, count: int = 12) -> Dict[str, Any]:
         """

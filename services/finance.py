@@ -88,13 +88,13 @@ class FinanceService:
         try:
             amt = to_decimal(amount)
         except (InvalidOperation, ValueError, TypeError):
-            return {"success": False, "message": f"Valor inválido: '{amount}'"}
+            return {"success": False, "message": f"Valor inválido: '{amount}'", "key": "validation.invalid_value", "params": {"value": str(amount)}}
         try:
             row = self.db.fetch_balance_row()
             self.db.save_balance_row(amt, row["salary"], row["last_salary_month"], row["last_salary_date"])
-            return {"success": True, "balance": amt, "message": "Saldo atualizado."}
+            return {"success": True, "balance": amt, "message": "Saldo atualizado.", "key": "balance.updated"}
         except sqlite3.Error as e:
-            return {"success": False, "message": f"Erro ao atualizar saldo: {e}"}
+            return {"success": False, "message": f"Erro ao atualizar saldo: {e}", "key": "balance.update_error", "params": {"error": str(e)}}
 
     def subtract_from_balance(self, amount: Any) -> Dict[str, Any]:
         """Subtrai `amount` do saldo (preserva salario e demais campos).
@@ -124,7 +124,7 @@ class FinanceService:
                 category, description, amount, subcategory, quantity, unit_price
             )
         except (InvalidOperation, ValueError, TypeError):
-            return {"success": False, "id": None, "message": f"Valor inválido: '{amount}'"}
+            return {"success": False, "id": None, "message": f"Valor inválido: '{amount}'", "key": "validation.invalid_value", "params": {"value": str(amount)}}
 
         res = self.db.insert_expense(cat, sub, desc, amt, qty, price)
         if res["success"]:
@@ -148,17 +148,17 @@ class FinanceService:
                 category, description, amount, subcategory, quantity, unit_price
             )
         except (InvalidOperation, ValueError, TypeError):
-            return {"success": False, "message": f"Valor inválido: '{amount}'"}
+            return {"success": False, "message": f"Valor inválido: '{amount}'", "key": "validation.invalid_value", "params": {"value": str(amount)}}
 
         if date_str is not None:
             try:
                 datetime.strptime(date_str, "%Y-%m-%d")
             except (ValueError, TypeError):
-                return {"success": False, "message": "Data inválida."}
+                return {"success": False, "message": "Data inválida.", "key": "validation.invalid_date"}
 
         existing = self.db.get_expense(expense_id)
         if not existing.get("success"):
-            return {"success": False, "message": "Despesa não encontrada para atualizar."}
+            return {"success": False, "message": "Despesa não encontrada para atualizar.", "key": "expense.not_found"}
         old_amount = existing["data"]["amount"]
 
         created_at = None
@@ -225,14 +225,16 @@ class FinanceService:
         batch = self.db.insert_expenses_batch(rows)
         if not batch["success"]:
             return {"success": False, "inserted": 0, "errors": errors, "total": Decimal("0"),
-                    "message": f"Erro em massa: {batch.get('message', '')}"}
+                    "message": f"Erro em massa: {batch.get('message', '')}",
+                    "key": "expenses.batch.error", "params": {"error": batch.get("message", "")}}
 
         msg = f"{inserted} despesa(s) inserida(s)."
         if errors:
             msg += f" {len(errors)} erro(s) encontrado(s)."
         if inserted > 0 and total > 0:
             self.subtract_from_balance(total)
-        return {"success": True, "inserted": inserted, "errors": errors, "total": total, "message": msg}
+        return {"success": True, "inserted": inserted, "errors": errors, "total": total, "message": msg,
+                "key": "expenses.bulk.result", "params": {"inserted": inserted, "errors_count": len(errors)}}
 
     def add_expenses_structured(self, category: str, subcategory: Optional[str],
                                  products: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -268,12 +270,14 @@ class FinanceService:
         batch = self.db.insert_expenses_batch(rows)
         if not batch["success"]:
             return {"success": False, "inserted": 0, "errors": errors, "total": Decimal("0"),
-                    "message": batch.get("message", "")}
+                    "message": batch.get("message", ""),
+                    "key": "expenses.batch.error", "params": {"error": batch.get("message", "")}}
 
         if inserted > 0 and total > 0:
             self.subtract_from_balance(total)
         return {"success": True, "inserted": inserted, "errors": errors, "total": total,
-                "message": f"{inserted} despesa(s) registrada(s)."}
+                "message": f"{inserted} despesa(s) registrada(s).",
+                "key": "expenses.structured.result", "params": {"inserted": inserted}}
 
     def parse_raw_text(self, raw_text: str) -> Dict[str, Any]:
         """Extrai descrição + valor de texto colado (ex.: notificações bancárias)."""

@@ -76,7 +76,7 @@ window.CG = window.CG || {};
         try {
             const res = await CG.api.call('check_auto_salary');
             if (res.success && res.should_credit) {
-                toast.show(res.message, 'success');
+                CG.i18n.showApiResult(res, 'success');
                 CG.balance.load();
             }
         } catch (e) {
@@ -93,8 +93,9 @@ window.CG = window.CG || {};
 
         // Aguarda a ponte pywebview ficar pronta antes de chamar QUALQUER
         // método do backend.
-        CG.api.waitReady().then(() => {
+        CG.api.waitReady().then(async () => {
             CG.theme.init();
+            await CG.settings.init(); // idioma (CG.i18n) + cor principal (CG.color)
             CG.balance.load();      // saldo no header
             CG.dashboard.load();
             CG.register.loadCategoryList();
@@ -103,7 +104,7 @@ window.CG = window.CG || {};
             CG.monthly.checkAuto(); // lançamento automático de despesas mensais
             loadAppVersion();
         }).catch(() => {
-            toast.show('Erro de inicialização do app.', 'error');
+            toast.show(CG.i18n.t('main.init_error'), 'error');
         });
     });
 })();

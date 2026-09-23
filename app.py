@@ -73,6 +73,18 @@ class Api:
     def set_theme(self, theme: str):
         return self.cfg.set_theme(theme)
 
+    def get_language(self):
+        return self.cfg.get_language()
+
+    def set_language(self, language: str):
+        return self.cfg.set_language(language)
+
+    def get_primary_color(self):
+        return self.cfg.get_primary_color()
+
+    def set_primary_color(self, color: str):
+        return self.cfg.set_primary_color(color)
+
     # ------------------------------------------------------------------
     # Saldo (services/finance.py)
     # ------------------------------------------------------------------

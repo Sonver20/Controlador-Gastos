@@ -43,41 +43,43 @@ class MonthlyService:
         """Cria um grupo de despesa mensal com seus itens."""
         clean_name = (name or "").strip()
         if not clean_name:
-            return {"success": False, "message": "Informe um nome para a despesa mensal."}
+            return {"success": False, "message": "Informe um nome para a despesa mensal.", "key": "monthly.name_required"}
         prepared, errors = self._prepare_items(items)
         if not prepared:
-            return {"success": False, "message": "Nenhum item válido. Cada item precisa de categoria, nome, preço e quantidade.", "errors": errors}
+            return {"success": False, "message": "Nenhum item válido. Cada item precisa de categoria, nome, preço e quantidade.", "errors": errors, "key": "monthly.no_valid_items"}
         try:
             group_id = self.db.insert_monthly_group(clean_name, prepared)
             return {"success": True, "id": group_id, "inserted_items": len(prepared),
-                    "message": f"Despesa mensal '{clean_name}' criada com {len(prepared)} item(ns)."}
+                    "message": f"Despesa mensal '{clean_name}' criada com {len(prepared)} item(ns).",
+                    "key": "monthly.created", "params": {"name": clean_name, "count": len(prepared)}}
         except sqlite3.Error as e:
-            return {"success": False, "message": f"Erro ao criar despesa mensal: {e}"}
+            return {"success": False, "message": f"Erro ao criar despesa mensal: {e}", "key": "monthly.create_error", "params": {"error": str(e)}}
 
     def update_group(self, group_id: int, name: str, items: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Atualiza nome e itens de um grupo existente (itens são
         substituídos). Não altera last_applied_month."""
         clean_name = (name or "").strip()
         if not clean_name:
-            return {"success": False, "message": "Informe um nome para a despesa mensal."}
+            return {"success": False, "message": "Informe um nome para a despesa mensal.", "key": "monthly.name_required"}
         prepared, errors = self._prepare_items(items)
         if not prepared:
-            return {"success": False, "message": "Nenhum item válido. Cada item precisa de categoria, nome, preço e quantidade.", "errors": errors}
+            return {"success": False, "message": "Nenhum item válido. Cada item precisa de categoria, nome, preço e quantidade.", "errors": errors, "key": "monthly.no_valid_items"}
         try:
             self.db.update_monthly_group(group_id, clean_name, prepared)
             return {"success": True, "inserted_items": len(prepared),
-                    "message": f"Despesa mensal '{clean_name}' atualizada com {len(prepared)} item(ns)."}
+                    "message": f"Despesa mensal '{clean_name}' atualizada com {len(prepared)} item(ns).",
+                    "key": "monthly.updated", "params": {"name": clean_name, "count": len(prepared)}}
         except sqlite3.Error as e:
-            return {"success": False, "message": f"Erro ao atualizar despesa mensal: {e}"}
+            return {"success": False, "message": f"Erro ao atualizar despesa mensal: {e}", "key": "monthly.update_error", "params": {"error": str(e)}}
 
     def delete_group(self, group_id: int) -> Dict[str, Any]:
         """Exclui um grupo e seus itens (template apenas; despesas já
         lançadas na tabela expenses NÃO são afetadas)."""
         try:
             self.db.delete_monthly_group(group_id)
-            return {"success": True, "message": "Despesa mensal excluída."}
+            return {"success": True, "message": "Despesa mensal excluída.", "key": "monthly.deleted"}
         except sqlite3.Error as e:
-            return {"success": False, "message": f"Erro ao excluir: {e}"}
+            return {"success": False, "message": f"Erro ao excluir: {e}", "key": "monthly.delete_error", "params": {"error": str(e)}}
 
     def list_groups(self) -> Dict[str, Any]:
         """
@@ -133,7 +135,7 @@ class MonthlyService:
             return {"success": False, "message": groups.get("message", "Erro ao carregar grupos.")}
         group = next((g for g in groups["data"] if g["id"] == group_id), None)
         if group is None:
-            return {"success": False, "message": "Despesa mensal não encontrada."}
+            return {"success": False, "message": "Despesa mensal não encontrada.", "key": "monthly.not_found"}
 
         rows = [{
             "category": it["category"],
@@ -146,7 +148,8 @@ class MonthlyService:
 
         batch = self.db.insert_expenses_batch(rows)
         if not batch["success"]:
-            return {"success": False, "message": f"Erro ao lançar despesas: {batch.get('message', '')}"}
+            return {"success": False, "message": f"Erro ao lançar despesas: {batch.get('message', '')}",
+                    "key": "monthly.apply_error", "params": {"error": batch.get("message", "")}}
 
         self.finance.subtract_from_balance(group["total"])
         self.db.set_monthly_group_applied(group_id, month_key)
@@ -155,6 +158,8 @@ class MonthlyService:
             "inserted": len(rows),
             "total": group["total"],
             "message": f"'{group['name']}' aplicada: {len(rows)} despesa(s), {group['total']:.2f} debitado(s) do saldo.",
+            "key": "monthly.applied",
+            "params": {"name": group["name"], "count": len(rows), "total": group["total"]},
         }
 
     def check_and_apply(self) -> Dict[str, Any]:
@@ -177,7 +182,7 @@ class MonthlyService:
                 applied.append(res)
 
         if not applied:
-            return {"success": True, "applied_count": 0, "message": "Nenhuma despesa mensal pendente."}
+            return {"success": True, "applied_count": 0, "message": "Nenhuma despesa mensal pendente.", "key": "monthly.none_pending"}
 
         total = sum((r["total"] for r in applied), Decimal("0"))
         total_inserted = sum(r["inserted"] for r in applied)
@@ -187,6 +192,8 @@ class MonthlyService:
             "inserted": total_inserted,
             "total": total,
             "message": f"Despesas mensais lançadas: {len(applied)} grupo(s), {total_inserted} despesa(s), {total:.2f} debitado(s) do saldo.",
+            "key": "monthly.check_applied",
+            "params": {"groups": len(applied), "inserted": total_inserted, "total": total},
         }
 
     # ------------------------------------------------------------------

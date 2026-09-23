@@ -383,9 +383,9 @@ class Database:
                 )
                 conn.commit()
                 last_id = cursor.lastrowid
-            return {"success": True, "id": last_id, "message": "Despesa registrada com sucesso!"}
+            return {"success": True, "id": last_id, "message": "Despesa registrada com sucesso!", "key": "expense.add.success"}
         except sqlite3.Error as e:
-            return {"success": False, "id": None, "message": f"Erro ao salvar: {e}"}
+            return {"success": False, "id": None, "message": f"Erro ao salvar: {e}", "key": "expense.add.error", "params": {"error": str(e)}}
 
     def insert_expenses_batch(self, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -453,10 +453,10 @@ class Database:
                 conn.commit()
                 rowcount = cursor.rowcount
             if rowcount == 0:
-                return {"success": False, "message": "Despesa não encontrada para atualizar."}
-            return {"success": True, "message": "Despesa atualizada com sucesso!"}
+                return {"success": False, "message": "Despesa não encontrada para atualizar.", "key": "expense.not_found"}
+            return {"success": True, "message": "Despesa atualizada com sucesso!", "key": "expense.update.success"}
         except sqlite3.Error as e:
-            return {"success": False, "message": f"Erro ao atualizar: {e}"}
+            return {"success": False, "message": f"Erro ao atualizar: {e}", "key": "expense.update.error", "params": {"error": str(e)}}
 
     def delete_expense_row(self, expense_id: int) -> Dict[str, Any]:
         """DELETE bruto de uma despesa."""
@@ -466,10 +466,10 @@ class Database:
                 conn.commit()
                 rowcount = cursor.rowcount
             if rowcount == 0:
-                return {"success": False, "message": "Despesa não encontrada para excluir."}
-            return {"success": True, "message": "Despesa excluída com sucesso!"}
+                return {"success": False, "message": "Despesa não encontrada para excluir.", "key": "expense.not_found"}
+            return {"success": True, "message": "Despesa excluída com sucesso!", "key": "expense.delete.success"}
         except sqlite3.Error as e:
-            return {"success": False, "message": f"Erro ao excluir: {e}"}
+            return {"success": False, "message": f"Erro ao excluir: {e}", "key": "expense.delete.error", "params": {"error": str(e)}}
 
     # ------------------------------------------------------------------
     # Expenses: consultas / relatorios (SELECT direto, sem regra de negocio)

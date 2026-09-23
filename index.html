@@ -40,14 +40,14 @@
                 <div class="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
                     <i class="ph ph-currency-circle-dollar text-xl"></i>
                     <div class="text-right">
-                        <p class="text-xs opacity-70 leading-none">Saldo</p>
+                        <p class="text-xs opacity-70 leading-none" data-i18n="header.balance_label">Saldo</p>
                         <p class="font-bold text-sm leading-tight" id="header-balance">R$ 0,00</p>
                     </div>
-                    <button onclick="CG.balance.openModal()" class="p-1 rounded hover:bg-white/20 transition ml-1" title="Editar saldo">
+                    <button onclick="CG.balance.openModal()" class="p-1 rounded hover:bg-white/20 transition ml-1" title="Editar saldo" data-i18n-title="header.edit_balance_title">
                         <i class="ph ph-pencil-simple text-sm"></i>
                     </button>
                 </div>
-                <button id="btn-theme" class="p-2 rounded-lg hover:bg-white/20 transition" title="Alternar tema">
+                <button id="btn-theme" class="p-2 rounded-lg hover:bg-white/20 transition" title="Alternar tema" data-i18n-title="header.theme_toggle_title">
                     <i class="ph ph-moon text-xl" id="icon-theme"></i>
                 </button>
             </div>
@@ -62,31 +62,59 @@
             <nav class="p-4 space-y-1">
                 <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 font-medium" data-target="view-dashboard">
                     <i class="ph ph-chart-pie-slice text-xl"></i>
-                    <span>Dashboard</span>
+                    <span data-i18n="nav.dashboard">Dashboard</span>
                 </button>
                 <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-register">
                     <i class="ph ph-plus-circle text-xl"></i>
-                    <span>Nova Despesa</span>
+                    <span data-i18n="nav.register">Nova Despesa</span>
                 </button>
                 <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-monthly">
                     <i class="ph ph-repeat text-xl"></i>
-                    <span>Despesas Mensais</span>
+                    <span data-i18n="nav.monthly">Despesas Mensais</span>
                 </button>
                 <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-tree">
                     <i class="ph ph-tree-structure text-xl"></i>
-                    <span>Árvore de Gastos</span>
+                    <span data-i18n="nav.tree">Árvore de Gastos</span>
                 </button>
                 <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300" data-target="view-calendar">
                     <i class="ph ph-calendar text-xl"></i>
-                    <span>Calendário</span>
+                    <span data-i18n="nav.calendar">Calendário</span>
                 </button>
             </nav>
 
-            <!-- Footer info -->
-            <div class="mt-auto p-4 border-t border-slate-200 dark:border-slate-700">
-                <p id="app-version-footer" class="text-xs text-slate-400 dark:text-slate-500 text-center">
-                    Controlador de Gastos<br>PyWebView Desktop
-                </p>
+            <!-- Footer info + Configurações -->
+            <div class="mt-auto p-4 border-t border-slate-200 dark:border-slate-700 relative">
+                <div id="settings-popover" class="hidden absolute bottom-full left-4 mb-2 w-64 bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-4 z-50">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2" data-i18n="settings.language_label">Idioma</p>
+                        <div class="flex gap-2">
+                            <button type="button" class="lang-btn flex-1 px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-lang="pt">Português</button>
+                            <button type="button" class="lang-btn flex-1 px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-lang="en">English</button>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2" data-i18n="settings.color_label">Cor principal</p>
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-violet-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="violet" title="Roxo"></button>
+                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-blue-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="blue" title="Azul"></button>
+                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-emerald-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="emerald" title="Verde"></button>
+                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-red-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="red" title="Vermelho"></button>
+                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-orange-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="orange" title="Laranja"></button>
+                            <label class="color-swatch-btn w-8 h-8 rounded-full overflow-hidden cursor-pointer border border-slate-300 dark:border-slate-600 relative ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" title="Personalizada" data-i18n-title="settings.color_custom_label">
+                                <i class="ph ph-palette absolute inset-0 flex items-center justify-center text-slate-500 dark:text-slate-300 pointer-events-none"></i>
+                                <input type="color" id="settings-color-custom" class="opacity-0 absolute -top-1 -left-1 w-10 h-10 cursor-pointer border-0 p-0">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <button id="btn-settings" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition text-slate-500 dark:text-slate-400 shrink-0" title="Configurações" data-i18n-title="settings.title">
+                        <i class="ph ph-gear text-xl"></i>
+                    </button>
+                    <p id="app-version-footer" class="text-xs text-slate-400 dark:text-slate-500 text-right leading-tight">
+                        Controlador de Gastos<br>PyWebView Desktop
+                    </p>
+                </div>
             </div>
         </aside>
 
@@ -99,8 +127,8 @@
             <!-- ===== VIEW: DASHBOARD ===== -->
             <section id="view-dashboard" class="view-section space-y-6">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-2xl font-bold">Dashboard</h2>
-                    <button onclick="CG.dashboard.load()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Atualizar">
+                    <h2 class="text-2xl font-bold" data-i18n="dashboard.title">Dashboard</h2>
+                    <button onclick="CG.dashboard.load()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Atualizar" data-i18n-title="dashboard.refresh_title">
                         <i class="ph ph-arrows-clockwise text-xl"></i>
                     </button>
                 </div>
@@ -112,7 +140,7 @@
                             <div class="p-2 bg-primary-100 dark:bg-primary-900/40 rounded-lg">
                                 <i class="ph ph-calendar text-primary-600 dark:text-primary-400 text-xl"></i>
                             </div>
-                            <span class="text-sm text-slate-500 dark:text-slate-400">Este Mês</span>
+                            <span class="text-sm text-slate-500 dark:text-slate-400" data-i18n="dashboard.this_month">Este Mês</span>
                         </div>
                         <p class="text-2xl font-bold" id="dash-current-month">R$ 0,00</p>
                     </div>
@@ -121,7 +149,7 @@
                             <div class="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
                                 <i class="ph ph-trend-up text-amber-600 dark:text-amber-400 text-xl"></i>
                             </div>
-                            <span class="text-sm text-slate-500 dark:text-slate-400">Maior Categoria</span>
+                            <span class="text-sm text-slate-500 dark:text-slate-400" data-i18n="dashboard.top_category">Maior Categoria</span>
                         </div>
                         <p class="text-2xl font-bold" id="dash-top-category">-</p>
                     </div>
@@ -130,7 +158,7 @@
                             <div class="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
                                 <i class="ph ph-receipt text-blue-600 dark:text-blue-400 text-xl"></i>
                             </div>
-                            <span class="text-sm text-slate-500 dark:text-slate-400">Total de Despesas</span>
+                            <span class="text-sm text-slate-500 dark:text-slate-400" data-i18n="dashboard.total_expenses">Total de Despesas</span>
                         </div>
                         <p class="text-2xl font-bold" id="dash-total-count">0</p>
                     </div>
@@ -139,16 +167,16 @@
                 <!-- Monthly Summary Table -->
                 <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                        <h3 class="font-semibold">Resumo Mensal</h3>
+                        <h3 class="font-semibold" data-i18n="dashboard.summary_title">Resumo Mensal</h3>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead class="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase text-slate-500 dark:text-slate-400">
                                 <tr>
-                                    <th class="px-6 py-3">Mês</th>
-                                    <th class="px-6 py-3">Despesas</th>
-                                    <th class="px-6 py-3 text-right">Total</th>
-                                    <th class="px-6 py-3 text-right">Ação</th>
+                                    <th class="px-6 py-3" data-i18n="dashboard.table_month">Mês</th>
+                                    <th class="px-6 py-3" data-i18n="dashboard.table_expenses">Despesas</th>
+                                    <th class="px-6 py-3 text-right" data-i18n="dashboard.table_total">Total</th>
+                                    <th class="px-6 py-3 text-right" data-i18n="dashboard.table_action">Ação</th>
                                 </tr>
                             </thead>
                             <tbody id="dash-months-body" class="divide-y divide-slate-200 dark:divide-slate-700">
@@ -161,32 +189,32 @@
 
             <!-- ===== VIEW: SINGLE REGISTRATION ===== -->
             <section id="view-register" class="view-section hidden max-w-3xl mx-auto">
-                <h2 class="text-2xl font-bold mb-6">Nova Despesa</h2>
+                <h2 class="text-2xl font-bold mb-6" data-i18n="register.title">Nova Despesa</h2>
                 <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-5">
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Categoria</label>
+                            <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="register.category_label">Categoria</label>
                             <input type="text" id="reg-category" list="category-list"
                                 class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
-                                placeholder="Ex: Alimentação, Transporte, Moradia...">
+                                placeholder="Ex: Alimentação, Transporte, Moradia..." data-i18n-placeholder="register.category_placeholder">
                             <datalist id="category-list"></datalist>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Subcategoria (opcional)</label>
+                            <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="register.subcategory_label">Subcategoria (opcional)</label>
                             <input type="text" id="reg-subcategory" list="subcategory-list"
                                 class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
-                                placeholder="Ex: Assaí Atacadista, Carnes...">
+                                placeholder="Ex: Assaí Atacadista, Carnes..." data-i18n-placeholder="register.subcategory_placeholder">
                             <datalist id="subcategory-list"></datalist>
                         </div>
                     </div>
 
                     <div>
                         <div class="flex items-center justify-between mb-2">
-                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Produtos</label>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" data-i18n="register.products_label">Produtos</label>
                             <button type="button" onclick="CG.register.addProductRow()"
                                 class="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 font-medium">
-                                <i class="ph ph-plus-circle"></i> Adicionar produto
+                                <i class="ph ph-plus-circle"></i> <span data-i18n="register.add_product">Adicionar produto</span>
                             </button>
                         </div>
                         <div id="reg-products-list" class="space-y-3">
@@ -195,7 +223,7 @@
                     </div>
 
                     <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-4">
-                        <span class="text-sm text-slate-500 dark:text-slate-400">Total</span>
+                        <span class="text-sm text-slate-500 dark:text-slate-400" data-i18n="register.total_label">Total</span>
                         <span id="reg-grand-total" class="text-xl font-bold text-primary-600 dark:text-primary-400">R$ 0,00</span>
                     </div>
 
@@ -203,10 +231,10 @@
                         <button onclick="CG.register.submitProductsExpense()"
                             class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2">
                             <i class="ph ph-check-circle text-xl"></i>
-                            Salvar Despesa
+                            <span data-i18n="register.save_button">Salvar Despesa</span>
                         </button>
                         <button onclick="CG.register.clearRegisterForm()"
-                            class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                            class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-i18n="register.clear_button">
                             Limpar
                         </button>
                     </div>
@@ -220,13 +248,13 @@
                 <div id="monthly-list-view">
                     <div class="flex items-center justify-between mb-6">
                         <div>
-                            <h2 class="text-2xl font-bold">Despesas Mensais</h2>
-                            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Gastos fixos lançados e debitados do saldo automaticamente todo mês.</p>
+                            <h2 class="text-2xl font-bold" data-i18n="monthly.title">Despesas Mensais</h2>
+                            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1" data-i18n="monthly.subtitle">Gastos fixos lançados e debitados do saldo automaticamente todo mês.</p>
                         </div>
                         <button onclick="CG.monthly.openForm()"
                             class="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 px-5 rounded-xl transition flex items-center gap-2">
                             <i class="ph ph-plus-circle text-xl"></i>
-                            Nova Despesa Mensal
+                            <span data-i18n="monthly.new_button">Nova Despesa Mensal</span>
                         </button>
                     </div>
                     <div id="monthly-groups-list" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -237,29 +265,29 @@
                 <!-- Formulário (novo / editar) -->
                 <div id="monthly-form-view" class="hidden max-w-4xl mx-auto">
                     <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold" id="monthly-form-title">Nova Despesa Mensal</h2>
-                        <button onclick="CG.monthly.closeForm()" class="text-sm text-primary-600 hover:underline">&larr; Voltar à lista</button>
+                        <h2 class="text-2xl font-bold" id="monthly-form-title" data-i18n="monthly.form_new_title">Nova Despesa Mensal</h2>
+                        <button onclick="CG.monthly.closeForm()" class="text-sm text-primary-600 hover:underline" data-i18n="monthly.back_to_list">&larr; Voltar à lista</button>
                     </div>
 
                     <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-5">
                         <div class="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl p-4 text-sm text-violet-800 dark:text-violet-300">
-                            <p class="font-medium mb-1"><i class="ph ph-info mr-1"></i> Como funciona</p>
-                            <p class="text-xs opacity-80">Cada item pode ter uma <strong>categoria diferente</strong>. Todo mês, ao abrir o app, todos os itens são lançados como despesas e o total é debitado do seu saldo automaticamente.</p>
+                            <p class="font-medium mb-1"><i class="ph ph-info mr-1"></i> <span data-i18n="monthly.how_it_works_title">Como funciona</span></p>
+                            <p class="text-xs opacity-80" data-i18n="monthly.how_it_works_desc">Cada item pode ter uma <strong>categoria diferente</strong>. Todo mês, ao abrir o app, todos os itens são lançados como despesas e o total é debitado do seu saldo automaticamente.</p>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Nome da despesa mensal</label>
+                            <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="monthly.name_label">Nome da despesa mensal</label>
                             <input type="text" id="monthly-group-name"
                                 class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
-                                placeholder='Ex: Contas da casa, Assinaturas, Mercado do mês'>
+                                placeholder='Ex: Contas da casa, Assinaturas, Mercado do mês' data-i18n-placeholder="monthly.name_placeholder">
                         </div>
 
                         <div>
                             <div class="flex items-center justify-between mb-2">
-                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Itens (cada um com sua categoria)</label>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" data-i18n="monthly.items_label">Itens (cada um com sua categoria)</label>
                                 <button type="button" onclick="CG.monthly.addItemRow()"
                                     class="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 font-medium">
-                                    <i class="ph ph-plus-circle"></i> Adicionar item
+                                    <i class="ph ph-plus-circle"></i> <span data-i18n="monthly.add_item">Adicionar item</span>
                                 </button>
                             </div>
                             <div id="monthly-items-list" class="space-y-3">
@@ -268,7 +296,7 @@
                         </div>
 
                         <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-4">
-                            <span class="text-sm text-slate-500 dark:text-slate-400">Total mensal</span>
+                            <span class="text-sm text-slate-500 dark:text-slate-400" data-i18n="monthly.form_total_label">Total mensal</span>
                             <span id="monthly-grand-total" class="text-xl font-bold text-primary-600 dark:text-primary-400">R$ 0,00</span>
                         </div>
 
@@ -276,10 +304,10 @@
                             <button onclick="CG.monthly.submitForm()"
                                 class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2">
                                 <i class="ph ph-check-circle text-xl"></i>
-                                Salvar Despesa Mensal
+                                <span data-i18n="monthly.save_button">Salvar Despesa Mensal</span>
                             </button>
                             <button onclick="CG.monthly.closeForm()"
-                                class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                                class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-i18n="monthly.cancel_button">
                                 Cancelar
                             </button>
                         </div>
@@ -289,11 +317,11 @@
 
             <!-- ===== VIEW: EXPENSES TREE ===== -->
             <section id="view-tree" class="view-section hidden">
-                <h2 class="text-2xl font-bold mb-6">Árvore de Gastos</h2>
+                <h2 class="text-2xl font-bold mb-6" data-i18n="tree.title">Árvore de Gastos</h2>
 
                 <!-- Breadcrumb -->
                 <nav class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-4" id="tree-breadcrumb">
-                    <button onclick="CG.tree.showMonthsList()" class="hover:text-primary-600 dark:hover:text-primary-400 transition font-medium">Meses</button>
+                    <button onclick="CG.tree.showMonthsList()" class="hover:text-primary-600 dark:hover:text-primary-400 transition font-medium" data-i18n="tree.breadcrumb_months">Meses</button>
                 </nav>
 
                 <!-- Level 1: Months -->
@@ -305,7 +333,7 @@
                 <div id="tree-categories" class="hidden space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-lg font-semibold" id="tree-cat-title"></h3>
-                        <button onclick="CG.tree.showMonthsList()" class="text-sm text-primary-600 hover:underline">&larr; Voltar aos meses</button>
+                        <button onclick="CG.tree.showMonthsList()" class="text-sm text-primary-600 hover:underline" data-i18n="tree.back_to_months">&larr; Voltar aos meses</button>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="tree-categories-grid">
                         <!-- Populated by JS -->
@@ -316,7 +344,7 @@
                 <div id="tree-subcategories" class="hidden space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-lg font-semibold" id="tree-subcat-title"></h3>
-                        <button onclick="CG.tree.showCategoriesForMonth()" class="text-sm text-primary-600 hover:underline">&larr; Voltar às categorias</button>
+                        <button onclick="CG.tree.showCategoriesForMonth()" class="text-sm text-primary-600 hover:underline" data-i18n="tree.back_to_categories">&larr; Voltar às categorias</button>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="tree-subcategories-grid">
                         <!-- Populated by JS -->
@@ -327,17 +355,17 @@
                 <div id="tree-expenses" class="hidden space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-lg font-semibold" id="tree-exp-title"></h3>
-                        <button onclick="CG.tree.goBackFromExpenses()" class="text-sm text-primary-600 hover:underline">&larr; Voltar</button>
+                        <button onclick="CG.tree.goBackFromExpenses()" class="text-sm text-primary-600 hover:underline" data-i18n="tree.back">&larr; Voltar</button>
                     </div>
                     <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead class="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase text-slate-500 dark:text-slate-400">
                                     <tr>
-                                        <th class="px-6 py-3">Data</th>
-                                        <th class="px-6 py-3">Descrição</th>
-                                        <th class="px-6 py-3 text-right">Valor</th>
-                                        <th class="px-6 py-3 text-center">Ações</th>
+                                        <th class="px-6 py-3" data-i18n="tree.table_date">Data</th>
+                                        <th class="px-6 py-3" data-i18n="tree.table_description">Descrição</th>
+                                        <th class="px-6 py-3 text-right" data-i18n="tree.table_value">Valor</th>
+                                        <th class="px-6 py-3 text-center" data-i18n="tree.table_actions">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tree-expenses-body" class="divide-y divide-slate-200 dark:divide-slate-700">
@@ -352,7 +380,7 @@
             <!-- ===== VIEW: CALENDARIO ===== -->
             <section id="view-calendar" class="view-section hidden">
                 <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Calendário de Salários</h2>
+                    <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100" data-i18n="calendar.title">Calendário de Salários</h2>
                 </div>
                 <div id="salary-calendar-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     <!-- Preenchido por JS -->
@@ -366,7 +394,7 @@
     <div id="edit-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
         <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-lg mx-4 p-6 space-y-5 transform transition-all">
             <div class="flex items-center justify-between">
-                <h3 class="text-lg font-bold">Editar Despesa</h3>
+                <h3 class="text-lg font-bold" data-i18n="edit_modal.title">Editar Despesa</h3>
                 <button onclick="CG.modals.closeEdit()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                     <i class="ph ph-x text-xl"></i>
                 </button>
@@ -375,35 +403,35 @@
             <input type="hidden" id="edit-id">
 
             <div>
-                <label class="block text-sm font-medium mb-2">Categoria</label>
+                <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.category">Categoria</label>
                 <input type="text" id="edit-category" list="category-list"
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
             </div>
             <div>
-                <label class="block text-sm font-medium mb-2">Subcategoria (opcional)</label>
+                <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.subcategory">Subcategoria (opcional)</label>
                 <input type="text" id="edit-subcategory" list="subcategory-list"
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
             </div>
             <div>
-                <label class="block text-sm font-medium mb-2">Descrição</label>
+                <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.description">Descrição</label>
                 <input type="text" id="edit-description"
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
             </div>
 
             <div>
-                <label class="block text-sm font-medium mb-2">Data</label>
+                <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.date">Data</label>
                 <input type="date" id="edit-date"
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
             </div>
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-sm font-medium mb-2">Preço unitário (R$)</label>
+                    <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.unit_price">Preço unitário (R$)</label>
                     <input type="number" id="edit-unit-price" step="0.01" min="0" oninput="CG.modals.updateEditTotal()"
                         class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-2">Quantidade</label>
+                    <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.quantity">Quantidade</label>
                     <div class="flex items-center gap-2">
                         <button type="button" onclick="CG.modals.stepEditQty(-1)"
                             class="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
@@ -415,17 +443,17 @@
                 </div>
             </div>
             <p class="text-sm text-slate-600 dark:text-slate-300">
-                Total: <span id="edit-total-display" class="font-semibold text-primary-600 dark:text-primary-400">R$ 0,00</span>
+                <span data-i18n="edit_modal.total_prefix">Total:</span> <span id="edit-total-display" class="font-semibold text-primary-600 dark:text-primary-400">R$ 0,00</span>
             </p>
 
 
             <div class="flex gap-3 pt-2">
                 <button onclick="CG.modals.submitEdit()"
-                    class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl transition">
+                    class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl transition" data-i18n="edit_modal.save">
                     Salvar Alterações
                 </button>
                 <button onclick="CG.modals.closeEdit()"
-                    class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-i18n="edit_modal.cancel">
                     Cancelar
                 </button>
             </div>
@@ -438,16 +466,16 @@
             <div class="w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto">
                 <i class="ph ph-trash text-2xl text-red-600 dark:text-red-400"></i>
             </div>
-            <h3 class="text-lg font-bold">Confirmar Exclusão</h3>
-            <p class="text-slate-500 dark:text-slate-400 text-sm">Tem certeza que deseja excluir esta despesa? Esta ação não pode ser desfeita.</p>
+            <h3 class="text-lg font-bold" data-i18n="delete_modal.title">Confirmar Exclusão</h3>
+            <p class="text-slate-500 dark:text-slate-400 text-sm" data-i18n="delete_modal.confirm_text">Tem certeza que deseja excluir esta despesa? Esta ação não pode ser desfeita.</p>
             <input type="hidden" id="delete-id">
             <div class="flex gap-3 pt-2">
                 <button onclick="CG.modals.confirmDelete()"
-                    class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition">
+                    class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition" data-i18n="delete_modal.delete">
                     Excluir
                 </button>
                 <button onclick="CG.modals.closeDelete()"
-                    class="flex-1 px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    class="flex-1 px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-i18n="delete_modal.cancel">
                     Cancelar
                 </button>
             </div>
@@ -458,7 +486,7 @@
     <div id="balance-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
         <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm mx-4 p-6 space-y-5 transform transition-all">
             <div class="flex items-center justify-between">
-                <h3 class="text-lg font-bold">Meu Saldo & Salário</h3>
+                <h3 class="text-lg font-bold" data-i18n="balance_modal.title">Meu Saldo & Salário</h3>
                 <button onclick="CG.balance.closeModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                     <i class="ph ph-x text-xl"></i>
                 </button>
@@ -469,7 +497,7 @@
 
             <!-- Saldo -->
             <div>
-                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Saldo Atual (R$)</label>
+                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="balance_modal.current_balance_label">Saldo Atual (R$)</label>
                 <input type="number" id="balance-input" step="0.01"
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition"
                     placeholder="0,00">
@@ -477,49 +505,49 @@
 
             <!-- Salário -->
             <div>
-                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Salário Mensal (R$)</label>
+                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="balance_modal.monthly_salary_label">Salário Mensal (R$)</label>
                 <input type="number" id="salary-input" step="0.01"
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition"
-                    placeholder="Ex: 3000,00">
-                <p class="text-xs text-slate-400 mt-1">Crédito automático a cada 30 dias.</p>
+                    placeholder="Ex: 3000,00" data-i18n-placeholder="balance_modal.salary_placeholder">
+                <p class="text-xs text-slate-400 mt-1" data-i18n="balance_modal.auto_credit_hint">Crédito automático a cada 30 dias.</p>
             </div>
 
             <!-- Próxima data de recebimento (âncora para o calendário e o crédito automático) -->
             <div>
-                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Próxima data de recebimento</label>
+                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="balance_modal.next_date_label">Próxima data de recebimento</label>
                 <input type="date" id="next-salary-date-input"
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
-                <p class="text-xs text-slate-400 mt-1">Usada para calcular os próximos recebimentos de 30 em 30 dias (os meses seguintes mudam de dia de acordo, já que nem todo mês tem o mesmo tamanho).</p>
+                <p class="text-xs text-slate-400 mt-1" data-i18n="balance_modal.next_date_hint">Usada para calcular os próximos recebimentos de 30 em 30 dias (os meses seguintes mudam de dia de acordo, já que nem todo mês tem o mesmo tamanho).</p>
             </div>
 
             <!-- Mês de Férias -->
             <div>
-                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Mês de Férias</label>
+                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="balance_modal.vacation_month_label">Mês de Férias</label>
                 <select id="vacation-month-input"
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
-                    <option value="1">Janeiro</option>
-                    <option value="2">Fevereiro</option>
-                    <option value="3">Março</option>
-                    <option value="4">Abril</option>
-                    <option value="5">Maio</option>
-                    <option value="6">Junho</option>
-                    <option value="7" selected>Julho</option>
-                    <option value="8">Agosto</option>
-                    <option value="9">Setembro</option>
-                    <option value="10">Outubro</option>
-                    <option value="11">Novembro</option>
-                    <option value="12">Dezembro</option>
+                    <option value="1" data-i18n="months.1">Janeiro</option>
+                    <option value="2" data-i18n="months.2">Fevereiro</option>
+                    <option value="3" data-i18n="months.3">Março</option>
+                    <option value="4" data-i18n="months.4">Abril</option>
+                    <option value="5" data-i18n="months.5">Maio</option>
+                    <option value="6" data-i18n="months.6">Junho</option>
+                    <option value="7" selected data-i18n="months.7">Julho</option>
+                    <option value="8" data-i18n="months.8">Agosto</option>
+                    <option value="9" data-i18n="months.9">Setembro</option>
+                    <option value="10" data-i18n="months.10">Outubro</option>
+                    <option value="11" data-i18n="months.11">Novembro</option>
+                    <option value="12" data-i18n="months.12">Dezembro</option>
                 </select>
-                <p class="text-xs text-slate-400 mt-1">No calendário, o recebimento que cair nesse mês mostrará o valor líquido das férias.</p>
+                <p class="text-xs text-slate-400 mt-1" data-i18n="balance_modal.vacation_hint">No calendário, o recebimento que cair nesse mês mostrará o valor líquido das férias.</p>
             </div>
 
             <div class="flex gap-3 pt-2">
                 <button onclick="CG.balance.submit()"
-                    class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl transition">
+                    class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl transition" data-i18n="balance_modal.save">
                     Salvar
                 </button>
                 <button onclick="CG.balance.closeModal()"
-                    class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-i18n="balance_modal.cancel">
                     Cancelar
                 </button>
             </div>
@@ -530,17 +558,17 @@
     <div id="ferias-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
         <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md mx-4 p-6 space-y-4 transform transition-all">
             <div class="flex items-center justify-between">
-                <h3 class="text-lg font-bold">Calcular Férias</h3>
+                <h3 class="text-lg font-bold" data-i18n="ferias.title">Calcular Férias</h3>
                 <button onclick="CG.calendar.closeFeriasModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                     <i class="ph ph-x text-xl"></i>
                 </button>
             </div>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Informe o salário bruto para calcular o valor líquido das férias (inclui 1/3 constitucional, INSS e IRRF).</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400" data-i18n="ferias.description">Informe o salário bruto para calcular o valor líquido das férias (inclui 1/3 constitucional, INSS e IRRF).</p>
             <div>
-                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Salário bruto (R$)</label>
+                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="ferias.gross_salary_label">Salário bruto (R$)</label>
                 <input type="number" id="ferias-salario-input" step="0.01" class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition" placeholder="5000.00">
             </div>
-            <button onclick="CG.calendar.calcularFerias()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition">Calcular</button>
+            <button onclick="CG.calendar.calcularFerias()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition" data-i18n="ferias.calculate_button">Calcular</button>
             <div id="ferias-result" class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700"></div>
         </div>
     </div>
@@ -551,6 +579,9 @@
     <script src="scripts/core/api.js"></script>
     <script src="scripts/core/theme.js"></script>
     <script src="scripts/core/toast.js"></script>
+    <script src="scripts/core/i18n.js"></script>
+    <script src="scripts/core/color.js"></script>
+    <script src="scripts/core/settings.js"></script>
     <script src="scripts/features/dashboard.js"></script>
     <script src="scripts/features/register.js"></script>
     <script src="scripts/features/monthly.js"></script>

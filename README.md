@@ -1,5 +1,7 @@
 # Controlador de Gastos
 
+🌐 **Idioma:** Português | [English](README.en.md)
+
 Aplicativo desktop nativo para controle financeiro pessoal, construído com
 **Python + PyWebView** e interface moderna em **HTML/CSS/JS**.
 

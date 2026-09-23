@@ -21,7 +21,8 @@ CG.utils = (function () {
     function formatMonth(yyyymm) {
         const [year, month] = yyyymm.split('-');
         const date = new Date(year, month - 1, 1);
-        return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+        const locale = (window.CG && CG.i18n) ? CG.i18n.locale() : 'pt-BR';
+        return date.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
     }
 
     function formatDateTime(isoString) {

@@ -1260,6 +1260,34 @@ class TestConfig(unittest.TestCase):
         theme = cfg2.get_theme()
         self.assertEqual(theme["theme"], "dark")
 
+    def test_get_language_default(self):
+        res = self.cfg.get_language()
+        self.assertTrue(res["success"])
+        self.assertEqual(res["language"], "pt")
+
+    def test_set_language(self):
+        res = self.cfg.set_language("en")
+        self.assertTrue(res["success"])
+        cfg2 = Config(config_path=self.config_path)
+        self.assertEqual(cfg2.get_language()["language"], "en")
+
+    def test_get_primary_color_default(self):
+        res = self.cfg.get_primary_color()
+        self.assertTrue(res["success"])
+        self.assertEqual(res["color"], "violet")
+
+    def test_set_primary_color_preset(self):
+        res = self.cfg.set_primary_color("blue")
+        self.assertTrue(res["success"])
+        cfg2 = Config(config_path=self.config_path)
+        self.assertEqual(cfg2.get_primary_color()["color"], "blue")
+
+    def test_set_primary_color_custom_hex(self):
+        res = self.cfg.set_primary_color("#ff8800")
+        self.assertTrue(res["success"])
+        cfg2 = Config(config_path=self.config_path)
+        self.assertEqual(cfg2.get_primary_color()["color"], "#ff8800")
+
     def test_get_set_custom_key(self):
         self.cfg.set("custom_key", "custom_value")
         self.assertEqual(self.cfg.get("custom_key"), "custom_value")

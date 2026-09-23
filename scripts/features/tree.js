@@ -58,7 +58,7 @@ CG.tree = (function () {
             grid.innerHTML = '';
 
             if (!res.success || !res.data.length) {
-                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400">Nenhuma despesa registrada.</div>`;
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400">${CG.i18n.t('tree.no_expenses_recorded')}</div>`;
                 return;
             }
 
@@ -72,14 +72,14 @@ CG.tree = (function () {
                         <i class="ph ph-caret-right text-slate-400"></i>
                     </div>
                     <div class="flex items-center justify-between text-sm">
-                        <span class="text-slate-500 dark:text-slate-400">${row.count} despesa(s)</span>
+                        <span class="text-slate-500 dark:text-slate-400">${CG.i18n.t('common.count_expenses', { count: row.count })}</span>
                         <span class="font-semibold text-primary-600 dark:text-primary-400">${formatCurrency(row.total)}</span>
                     </div>
                 `;
                 grid.appendChild(card);
             });
         } catch (e) {
-            grid.innerHTML = `<div class="col-span-full text-center py-12 text-red-400">Erro ao carregar meses.</div>`;
+            grid.innerHTML = `<div class="col-span-full text-center py-12 text-red-400">${CG.i18n.t('tree.load_months_error')}</div>`;
         }
     }
 
@@ -108,7 +108,7 @@ CG.tree = (function () {
             grid.innerHTML = '';
 
             if (!res.success || !res.data.length) {
-                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400">Nenhuma categoria encontrada.</div>`;
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400">${CG.i18n.t('tree.no_category_found')}</div>`;
                 return;
             }
 
@@ -122,14 +122,14 @@ CG.tree = (function () {
                         <i class="ph ph-caret-right text-slate-400"></i>
                     </div>
                     <div class="flex items-center justify-between text-sm">
-                        <span class="text-slate-500 dark:text-slate-400">${row.count} item(ns)</span>
+                        <span class="text-slate-500 dark:text-slate-400">${CG.i18n.t('common.count_items', { count: row.count })}</span>
                         <span class="font-semibold text-primary-600 dark:text-primary-400">${formatCurrency(row.total)}</span>
                     </div>
                 `;
                 grid.appendChild(card);
             });
         } catch (e) {
-            grid.innerHTML = `<div class="col-span-full text-center py-12 text-red-400">Erro ao carregar categorias.</div>`;
+            grid.innerHTML = `<div class="col-span-full text-center py-12 text-red-400">${CG.i18n.t('tree.load_categories_error')}</div>`;
         }
     }
 
@@ -170,7 +170,7 @@ CG.tree = (function () {
 
             buckets.forEach(row => {
                 const isEmpty = row.subcategory === '';
-                const label = isEmpty ? 'Sem subcategoria' : row.subcategory;
+                const label = isEmpty ? CG.i18n.t('tree.no_subcategory') : row.subcategory;
                 const card = document.createElement('div');
                 card.className = 'bg-card-light dark:bg-card-dark rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-all';
                 card.onclick = () => viewCategoryExpenses(month, category, row.subcategory);
@@ -180,7 +180,7 @@ CG.tree = (function () {
                         <i class="ph ph-caret-right text-slate-400"></i>
                     </div>
                     <div class="flex items-center justify-between text-sm">
-                        <span class="text-slate-500 dark:text-slate-400">${row.count} item(ns)</span>
+                        <span class="text-slate-500 dark:text-slate-400">${CG.i18n.t('common.count_items', { count: row.count })}</span>
                         <span class="font-semibold text-primary-600 dark:text-primary-400">${formatCurrency(row.total)}</span>
                     </div>
                 `;
@@ -219,7 +219,7 @@ CG.tree = (function () {
 
         let title = `${formatMonth(month)} > ${category}`;
         if (subcategory) title += ` > ${subcategory}`;
-        else if (subcategory === '') title += ` > Sem subcategoria`;
+        else if (subcategory === '') title += ` > ${CG.i18n.t('tree.no_subcategory')}`;
         document.getElementById('tree-exp-title').textContent = title;
 
         const tbody = document.getElementById('tree-expenses-body');
@@ -230,7 +230,7 @@ CG.tree = (function () {
             tbody.innerHTML = '';
 
             if (!res.success || !res.data.length) {
-                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-slate-400">Nenhuma despesa encontrada.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-slate-400">${CG.i18n.t('tree.no_expense_found')}</td></tr>`;
                 return;
             }
 
@@ -255,10 +255,10 @@ CG.tree = (function () {
                     <td class="px-6 py-4 text-right font-semibold">${formatCurrency(exp.amount)}</td>
                     <td class="px-6 py-4 text-center">
                         <div class="flex items-center justify-center gap-2">
-                            <button onclick="CG.modals.openEdit(${exp.id})" class="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition" title="Editar">
+                            <button onclick="CG.modals.openEdit(${exp.id})" class="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition" title="${CG.i18n.t('tree.edit_title')}">
                                 <i class="ph ph-pencil-simple text-lg"></i>
                             </button>
-                            <button onclick="CG.modals.openDelete(${exp.id})" class="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition" title="Excluir">
+                            <button onclick="CG.modals.openDelete(${exp.id})" class="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition" title="${CG.i18n.t('tree.delete_title')}">
                                 <i class="ph ph-trash text-lg"></i>
                             </button>
                         </div>
@@ -267,7 +267,7 @@ CG.tree = (function () {
                 tbody.appendChild(tr);
             });
         } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-red-400">Erro ao carregar despesas.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-red-400">${CG.i18n.t('tree.load_expenses_error')}</td></tr>`;
         }
     }
 
@@ -277,7 +277,7 @@ CG.tree = (function () {
     function updateBreadcrumb() {
         const bc = document.getElementById('tree-breadcrumb');
         const st = CG.state;
-        let html = `<button onclick="CG.tree.showMonthsList()" class="hover:text-primary-600 dark:hover:text-primary-400 transition font-medium">Meses</button>`;
+        let html = `<button onclick="CG.tree.showMonthsList()" class="hover:text-primary-600 dark:hover:text-primary-400 transition font-medium">${CG.i18n.t('tree.breadcrumb_months')}</button>`;
 
         if (st.currentTreeMonth) {
             html += ` <span class="text-slate-300">/</span> <button onclick="CG.tree.showCategoriesForMonth()" class="hover:text-primary-600 dark:hover:text-primary-400 transition">${formatMonth(st.currentTreeMonth)}</button>`;
@@ -290,7 +290,7 @@ CG.tree = (function () {
             }
         }
         if (st.currentTreeHasSubcategoryLevel && st.currentTreeSubcategory !== null) {
-            const label = st.currentTreeSubcategory === '' ? 'Sem subcategoria' : st.currentTreeSubcategory;
+            const label = st.currentTreeSubcategory === '' ? CG.i18n.t('tree.no_subcategory') : st.currentTreeSubcategory;
             html += ` <span class="text-slate-300">/</span> <span class="text-slate-700 dark:text-slate-200 font-medium">${escapeHtml(label)}</span>`;
         }
 

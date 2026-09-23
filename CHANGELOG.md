@@ -6,6 +6,36 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/)
 (`MAJOR.MINOR.PATCH`) a partir da versão 2.0.0.
 
+## [3.1.0] - 2026-09-22
+
+### Adicionado
+- **Internacionalização (PT/EN)**: engrenagem de Configurações no rodapé
+  da barra lateral, com seletor de idioma. Novo `scripts/core/i18n.js`
+  concentra o dicionário PT/EN e traduz tanto os elementos estáticos
+  (`data-i18n`) quanto o conteúdo gerado dinamicamente por cada
+  `scripts/features/*.js`; mensagens de sucesso/erro vindas do backend
+  passaram a trazer um campo `key` (e `params`) opcional, usado pelo
+  frontend para traduzir o toast (cai para o texto em português já
+  existente quando a chave não é reconhecida, então nada quebra).
+  `config.py` ganha `get_language`/`set_language`. `README.en.md`
+  criado, com link cruzado a partir do `README.md`.
+- **Cor principal personalizável**: no mesmo painel de Configurações,
+  5 paletas prontas (roxo/violeta — padrão e cor histórica do app, azul,
+  verde, vermelho, laranja) ou uma cor customizada via seletor de cor,
+  com escala 50-900 gerada automaticamente (preservando matiz/saturação
+  da cor escolhida). Novo `scripts/core/color.js`; `config.py` ganha
+  `get_primary_color`/`set_primary_color`. A troca é instantânea porque
+  o Tailwind (`assets/tailwind.js`) recompila ao vivo quando
+  `tailwind.config` muda.
+
+### Verificado
+- Investigado o relato de que excluir uma despesa não devolveria o
+  valor ao saldo: revisão de ponta a ponta (`modals.js` → `app.py` →
+  `services/finance.py` → `database.py`) e a suíte de testes completa
+  (170 testes, incluindo casos dedicados a esse cenário) não reproduziu
+  o problema — o comportamento correto já está em vigor desde a correção
+  da v2.2.0.
+
 ## [3.0.0] - 2026-09-21
 
 ### Adicionado

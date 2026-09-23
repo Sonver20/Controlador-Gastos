@@ -13,8 +13,8 @@ CG.dashboard = (function () {
             tbody.innerHTML = '';
 
             if (!res.success || !res.data.length) {
-                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-slate-400">Nenhuma despesa registrada ainda.</td></tr>`;
-                document.getElementById('dash-current-month').textContent = 'R$ 0,00';
+                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-slate-400">${CG.i18n.t('dashboard.no_expenses')}</td></tr>`;
+                document.getElementById('dash-current-month').textContent = formatCurrency(0);
                 document.getElementById('dash-top-category').textContent = '-';
                 document.getElementById('dash-total-count').textContent = '0';
                 return;
@@ -36,10 +36,10 @@ CG.dashboard = (function () {
                 tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition';
                 tr.innerHTML = `
                     <td class="px-6 py-4 font-medium">${formatMonth(row.month)}</td>
-                    <td class="px-6 py-4 text-slate-500 dark:text-slate-400">${row.count} despesa(s)</td>
+                    <td class="px-6 py-4 text-slate-500 dark:text-slate-400">${CG.i18n.t('common.count_expenses', { count: row.count })}</td>
                     <td class="px-6 py-4 text-right font-semibold text-primary-600 dark:text-primary-400">${formatCurrency(row.total)}</td>
                     <td class="px-6 py-4 text-right">
-                        <button onclick="CG.tree.viewMonthCategories('${row.month}')" class="text-sm text-primary-600 hover:underline">Ver detalhes &rarr;</button>
+                        <button onclick="CG.tree.viewMonthCategories('${row.month}')" class="text-sm text-primary-600 hover:underline">${CG.i18n.t('dashboard.view_details')}</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -62,7 +62,7 @@ CG.dashboard = (function () {
             }
         } catch (e) {
             console.error('Erro ao carregar dashboard:', e);
-            CG.toast.show('Erro ao carregar dashboard', 'error');
+            CG.toast.show(CG.i18n.t('dashboard.load_error'), 'error');
         }
     }
 

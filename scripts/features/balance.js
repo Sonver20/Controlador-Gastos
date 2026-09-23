@@ -53,8 +53,8 @@ CG.balance = (function () {
                 const salaryDisplay = document.getElementById('salary-display');
                 if (salaryDisplay) {
                     salaryDisplay.textContent = salRes.salary > 0
-                        ? `Salário atual: ${formatCurrency(salRes.salary)}`
-                        : 'Nenhum salário configurado';
+                        ? CG.i18n.t('balance_modal.salary_current_prefix', { amount: salRes.salary })
+                        : CG.i18n.t('balance_modal.no_salary_configured');
                 }
                 const nextDate = computeNextSalaryDate(salRes.last_salary_date);
                 document.getElementById('next-salary-date-input').value = nextDate ? nextDate.toISOString().slice(0, 10) : '';
@@ -79,7 +79,7 @@ CG.balance = (function () {
         const vacationMonth = vacationVal === '' ? 7 : parseInt(vacationVal);
 
         if (isNaN(parseFloat(balanceStr)) || isNaN(parseFloat(salaryStr)) || isNaN(vacationMonth)) {
-            CG.toast.show('Informe valores válidos.', 'warning');
+            CG.toast.show(CG.i18n.t('balance_modal.invalid_values_warning'), 'warning');
             return;
         }
 
@@ -95,14 +95,15 @@ CG.balance = (function () {
             }
 
             if (balRes.success && salRes.success && vacRes.success && dateRes.success) {
-                CG.toast.show('Saldo, salário e mês de férias atualizados!', 'success');
+                CG.toast.show(CG.i18n.t('balance_modal.save_success'), 'success');
                 document.getElementById('header-balance').textContent = formatCurrency(balRes.balance);
                 closeModal();
             } else {
-                CG.toast.show(balRes.message || salRes.message || vacRes.message || dateRes.message, 'error');
+                const failed = [balRes, salRes, vacRes, dateRes].find(r => !r.success);
+                CG.i18n.showApiResult(failed || { message: '' }, 'error');
             }
         } catch (e) {
-            CG.toast.show('Erro ao salvar.', 'error');
+            CG.toast.show(CG.i18n.t('balance_modal.save_generic_error'), 'error');
         }
     }
 

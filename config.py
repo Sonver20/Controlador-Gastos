@@ -48,3 +48,26 @@ class Config:
     def set_theme(self, theme: str) -> dict:
         """Salva a preferencia de tema."""
         return self.set("theme", theme)
+
+    def get_language(self) -> dict:
+        """Retorna o idioma salvo ou 'pt' como padrao."""
+        return {"success": True, "language": self.get("language", "pt")}
+
+    def set_language(self, language: str) -> dict:
+        """Salva a preferencia de idioma ('pt' ou 'en')."""
+        return self.set("language", language)
+
+    def get_primary_color(self) -> dict:
+        """
+        Retorna a cor principal salva ou 'violet' como padrao (cor
+        historica do app). O valor pode ser o id de uma paleta pre-definida
+        (ex.: 'violet', 'blue', 'emerald', 'red', 'orange') ou uma cor
+        customizada em hexadecimal (ex.: '#8b5cf6'), escolhida livremente
+        pelo usuario -- quem decide como interpretar isso (aplicar uma
+        paleta pronta ou gerar uma escala a partir do hex) e o frontend.
+        """
+        return {"success": True, "color": self.get("primary_color", "violet")}
+
+    def set_primary_color(self, color: str) -> dict:
+        """Salva a preferencia de cor principal (id de paleta ou hex)."""
+        return self.set("primary_color", color)

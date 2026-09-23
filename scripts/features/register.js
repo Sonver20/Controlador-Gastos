@@ -62,9 +62,9 @@ CG.register = (function () {
         row.dataset.rowId = rowId;
         row.innerHTML = `
             <input type="text" class="product-name flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
-                placeholder="Nome do produto" oninput="CG.register.updateProductsGrandTotal()">
+                placeholder="${CG.i18n.t('register.product_name_placeholder')}" oninput="CG.register.updateProductsGrandTotal()">
             <input type="number" class="product-price w-full sm:w-28 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
-                placeholder="Preço" step="0.01" min="0" oninput="CG.register.updateProductsGrandTotal()">
+                placeholder="${CG.i18n.t('register.product_price_placeholder')}" step="0.01" min="0" oninput="CG.register.updateProductsGrandTotal()">
             <div class="flex items-center gap-2 justify-center">
                 <button type="button" onclick="CG.register.stepProductQty('${rowId}', -1)"
                     class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
@@ -73,9 +73,9 @@ CG.register = (function () {
                 <button type="button" onclick="CG.register.stepProductQty('${rowId}', 1)"
                     class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">+</button>
             </div>
-            <span class="product-subtotal text-sm font-semibold text-slate-600 dark:text-slate-300 w-24 text-right shrink-0">R$ 0,00</span>
+            <span class="product-subtotal text-sm font-semibold text-slate-600 dark:text-slate-300 w-24 text-right shrink-0">${formatCurrency(0)}</span>
             <button type="button" onclick="CG.register.removeProductRow('${rowId}')"
-                class="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 shrink-0" title="Remover produto">
+                class="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 shrink-0" title="${CG.i18n.t('register.remove_product_title')}">
                 <i class="ph ph-trash text-lg"></i>
             </button>
         `;
@@ -125,7 +125,7 @@ CG.register = (function () {
         const subcategory = document.getElementById('reg-subcategory').value.trim();
 
         if (!category) {
-            CG.toast.show('Informe a categoria.', 'warning');
+            CG.toast.show(CG.i18n.t('register.category_required_warning'), 'warning');
             return;
         }
 
@@ -151,27 +151,27 @@ CG.register = (function () {
         });
 
         if (hasInvalidRow) {
-            CG.toast.show('Verifique os produtos: nome, preço e quantidade são obrigatórios.', 'warning');
+            CG.toast.show(CG.i18n.t('register.fill_correctly_warning'), 'warning');
             return;
         }
         if (products.length === 0) {
-            CG.toast.show('Adicione ao menos um produto.', 'warning');
+            CG.toast.show(CG.i18n.t('register.add_one_warning'), 'warning');
             return;
         }
 
         try {
             const res = await CG.api.call('add_expenses_structured', category, subcategory || null, products);
             if (res.success) {
-                CG.toast.show(res.message, 'success');
+                CG.i18n.showApiResult(res, 'success');
                 clearRegisterForm();
                 loadCategoryList();
                 loadSubcategoryList();
                 CG.balance.load();  // atualiza saldo no header
             } else {
-                CG.toast.show(res.message, 'error');
+                CG.i18n.showApiResult(res, 'error');
             }
         } catch (e) {
-            CG.toast.show('Erro de comunicação com o backend.', 'error');
+            CG.toast.show(CG.i18n.t('register.comm_error'), 'error');
         }
     }
 

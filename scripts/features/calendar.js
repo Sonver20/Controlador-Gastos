@@ -19,7 +19,7 @@ CG.calendar = (function () {
             container.innerHTML = '';
 
             if (!calRes.success) {
-                container.innerHTML = `<div class="col-span-full text-center py-12 text-red-400">Erro ao carregar calendário.</div>`;
+                container.innerHTML = `<div class="col-span-full text-center py-12 text-red-400">${CG.i18n.t('calendar.load_error')}</div>`;
                 return;
             }
 
@@ -27,8 +27,8 @@ CG.calendar = (function () {
                 container.innerHTML = `
                     <div class="col-span-full text-center py-16 text-slate-400 space-y-3">
                         <i class="ph ph-calendar-x text-4xl block mx-auto"></i>
-                        <p>Configure a próxima data de recebimento do salário para ver o calendário.</p>
-                        <button onclick="CG.balance.openModal()" class="text-primary-600 hover:underline text-sm font-medium">Configurar agora</button>
+                        <p>${CG.i18n.t('calendar.no_reference_msg')}</p>
+                        <button onclick="CG.balance.openModal()" class="text-primary-600 hover:underline text-sm font-medium">${CG.i18n.t('calendar.configure_now')}</button>
                     </div>`;
                 return;
             }
@@ -57,17 +57,26 @@ CG.calendar = (function () {
                     ? formatCurrency(entry.amount)
                     : '---';
 
+                // Rótulo calculado no frontend (em vez do entry.label vindo
+                // do backend, que só existe em português) para acompanhar
+                // o idioma selecionado.
+                const label = (entry.amount === null || entry.amount === undefined)
+                    ? CG.i18n.t('calendar.not_configured')
+                    : entry.is_vacation
+                        ? CG.i18n.t('calendar.vacation_net')
+                        : CG.i18n.t('calendar.monthly_salary');
+
                 card.innerHTML = `
                     <div class="flex items-center justify-between">
                         <span class="font-bold ${entry.is_vacation ? 'text-amber-700 dark:text-amber-400' : ''}">${dateLabel}</span>
                         <div class="flex gap-1.5">
-                            ${entry.is_vacation ? '<span class="text-xs bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded-full font-medium">Férias</span>' : ''}
-                            ${isNext ? '<span class="text-xs bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full font-medium">Próximo</span>' : ''}
+                            ${entry.is_vacation ? `<span class="text-xs bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded-full font-medium">${CG.i18n.t('calendar.vacation_badge')}</span>` : ''}
+                            ${isNext ? `<span class="text-xs bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full font-medium">${CG.i18n.t('calendar.next_badge')}</span>` : ''}
                         </div>
                     </div>
                     <div class="mt-1">
                         <p class="text-lg font-semibold ${entry.is_vacation ? 'text-amber-700 dark:text-amber-400' : 'text-primary-600 dark:text-primary-400'}">${valorDisplay}</p>
-                        <p class="text-xs text-slate-400">${entry.is_vacation ? 'Clique para detalhes' : entry.label}</p>
+                        <p class="text-xs text-slate-400">${entry.is_vacation ? CG.i18n.t('calendar.click_details') : label}</p>
                     </div>
                 `;
 
@@ -78,7 +87,7 @@ CG.calendar = (function () {
                 container.appendChild(card);
             });
         } catch (e) {
-            container.innerHTML = `<div class="col-span-full text-center py-12 text-red-400">Erro ao carregar calendário.</div>`;
+            container.innerHTML = `<div class="col-span-full text-center py-12 text-red-400">${CG.i18n.t('calendar.load_error')}</div>`;
         }
     }
 
@@ -121,7 +130,7 @@ CG.calendar = (function () {
         const resultDiv = document.getElementById('ferias-result');
 
         if (!salarioStr || isNaN(salario) || salario <= 0) {
-            resultDiv.innerHTML = `<p class="text-amber-600 dark:text-amber-400 text-sm">Informe um salário válido.</p>`;
+            resultDiv.innerHTML = `<p class="text-amber-600 dark:text-amber-400 text-sm">${CG.i18n.t('ferias.invalid_salary_warning')}</p>`;
             return;
         }
 
@@ -130,22 +139,22 @@ CG.calendar = (function () {
             if (res.success) {
                 resultDiv.innerHTML = `
                     <div class="space-y-2 text-sm">
-                        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">Salário bruto:</span><span class="font-medium">${formatCurrency(res.salario_bruto)}</span></div>
-                        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">1/3 constitucional:</span><span class="font-medium">${formatCurrency(res.terco_constitucional)}</span></div>
-                        <div class="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-1"><span class="text-slate-500 dark:text-slate-400">Total bruto:</span><span class="font-semibold">${formatCurrency(res.total_bruto)}</span></div>
-                        <div class="flex justify-between text-red-600 dark:text-red-400"><span>INSS:</span><span>-${formatCurrency(res.inss)}</span></div>
-                        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">Base IRRF:</span><span>${formatCurrency(res.base_irrf)}</span></div>
-                        <div class="flex justify-between text-red-600 dark:text-red-400"><span>IRRF calculado:</span><span>-${formatCurrency(res.irrf_calculado)}</span></div>
-                        <div class="flex justify-between text-emerald-600 dark:text-emerald-400"><span>Desconto adicional:</span><span>+${formatCurrency(res.desconto_adicional)}</span></div>
-                        <div class="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-1"><span class="text-slate-500 dark:text-slate-400">IRRF final:</span><span class="font-medium">-${formatCurrency(res.irrf_final)}</span></div>
-                        <div class="flex justify-between text-lg font-bold text-primary-600 dark:text-primary-400 pt-1"><span>LÍQUIDO:</span><span>${formatCurrency(res.salario_liquido)}</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">${CG.i18n.t('ferias.result_gross')}</span><span class="font-medium">${formatCurrency(res.salario_bruto)}</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">${CG.i18n.t('ferias.result_third')}</span><span class="font-medium">${formatCurrency(res.terco_constitucional)}</span></div>
+                        <div class="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-1"><span class="text-slate-500 dark:text-slate-400">${CG.i18n.t('ferias.result_total_gross')}</span><span class="font-semibold">${formatCurrency(res.total_bruto)}</span></div>
+                        <div class="flex justify-between text-red-600 dark:text-red-400"><span>${CG.i18n.t('ferias.result_inss')}</span><span>-${formatCurrency(res.inss)}</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">${CG.i18n.t('ferias.result_irrf_base')}</span><span>${formatCurrency(res.base_irrf)}</span></div>
+                        <div class="flex justify-between text-red-600 dark:text-red-400"><span>${CG.i18n.t('ferias.result_irrf_calc')}</span><span>-${formatCurrency(res.irrf_calculado)}</span></div>
+                        <div class="flex justify-between text-emerald-600 dark:text-emerald-400"><span>${CG.i18n.t('ferias.result_additional_discount')}</span><span>+${formatCurrency(res.desconto_adicional)}</span></div>
+                        <div class="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-1"><span class="text-slate-500 dark:text-slate-400">${CG.i18n.t('ferias.result_irrf_final')}</span><span class="font-medium">-${formatCurrency(res.irrf_final)}</span></div>
+                        <div class="flex justify-between text-lg font-bold text-primary-600 dark:text-primary-400 pt-1"><span>${CG.i18n.t('ferias.result_net')}</span><span>${formatCurrency(res.salario_liquido)}</span></div>
                     </div>
                 `;
             } else {
                 resultDiv.innerHTML = `<p class="text-red-600 dark:text-red-400 text-sm">${res.message}</p>`;
             }
         } catch (e) {
-            resultDiv.innerHTML = `<p class="text-red-600 dark:text-red-400 text-sm">Erro ao calcular.</p>`;
+            resultDiv.innerHTML = `<p class="text-red-600 dark:text-red-400 text-sm">${CG.i18n.t('ferias.calc_error')}</p>`;
         }
     }
 

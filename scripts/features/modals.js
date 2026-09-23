@@ -13,7 +13,7 @@ CG.modals = (function () {
         try {
             const res = await CG.api.call('get_expense', id);
             if (!res.success || !res.data) {
-                CG.toast.show('Despesa não encontrada.', 'error');
+                CG.toast.show(CG.i18n.t('edit_modal.not_found_error'), 'error');
                 return;
             }
 
@@ -31,7 +31,7 @@ CG.modals = (function () {
             document.getElementById('edit-modal').classList.remove('hidden');
             document.getElementById('edit-modal').classList.add('flex');
         } catch (e) {
-            CG.toast.show('Erro ao carregar despesa.', 'error');
+            CG.toast.show(CG.i18n.t('edit_modal.load_error'), 'error');
         }
     }
 
@@ -66,7 +66,7 @@ CG.modals = (function () {
         const price = parseFloat(unitPriceStr);
         const qty = parseFloat(quantityStr);
         if (!category || !description || !dateVal || !unitPriceStr || isNaN(price) || price <= 0 || !quantityStr || isNaN(qty) || qty <= 0) {
-            CG.toast.show('Preencha todos os campos corretamente.', 'warning');
+            CG.toast.show(CG.i18n.t('edit_modal.fill_correctly_warning'), 'warning');
             return;
         }
 
@@ -75,17 +75,17 @@ CG.modals = (function () {
                 id, category, description, null, subcategory || null, quantityStr, unitPriceStr, dateVal
             );
             if (res.success) {
-                CG.toast.show(res.message, 'success');
+                CG.i18n.showApiResult(res, 'success');
                 closeEdit();
                 // Atualiza a listagem atual (preservando filtro de subcategoria)
                 CG.tree.refreshCurrentView();
                 CG.dashboard.load();
                 CG.balance.load();  // saldo pode ter mudado
             } else {
-                CG.toast.show(res.message, 'error');
+                CG.i18n.showApiResult(res, 'error');
             }
         } catch (e) {
-            CG.toast.show('Erro ao atualizar.', 'error');
+            CG.toast.show(CG.i18n.t('edit_modal.update_error_generic'), 'error');
         }
     }
 
@@ -109,17 +109,17 @@ CG.modals = (function () {
         try {
             const res = await CG.api.call('delete_expense', id);
             if (res.success) {
-                CG.toast.show(res.message, 'success');
+                CG.i18n.showApiResult(res, 'success');
                 closeDelete();
                 // Excluir devolve o valor da despesa ao saldo.
                 CG.tree.refreshCurrentView();
                 CG.dashboard.load();
                 CG.balance.load();
             } else {
-                CG.toast.show(res.message, 'error');
+                CG.i18n.showApiResult(res, 'error');
             }
         } catch (e) {
-            CG.toast.show('Erro ao excluir.', 'error');
+            CG.toast.show(CG.i18n.t('delete_modal.error_generic'), 'error');
         }
     }
 
