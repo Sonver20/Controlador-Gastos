@@ -8,7 +8,7 @@ Native desktop application for personal finance management, built with
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![PyWebView](https://img.shields.io/badge/PyWebView-5.0+-green?logo=python)
 ![SQLite](https://img.shields.io/badge/SQLite-3-orange?logo=sqlite)
-![Version](https://img.shields.io/badge/version-3.0.0-blueviolet)
+![Version](https://img.shields.io/badge/version-3.1.0-blueviolet)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
