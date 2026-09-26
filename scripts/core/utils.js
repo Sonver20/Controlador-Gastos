@@ -25,6 +25,28 @@ CG.utils = (function () {
         return new Intl.NumberFormat(locale, { maximumFractionDigits: 3 }).format(n);
     }
 
+    /**
+     * Formata um valor monetário sem o símbolo da moeda — usado nos campos
+     * de edição (preço unitário), onde o "R$" já aparece no rótulo do
+     * campo. Sempre 2 casas decimais, separador conforme o idioma atual.
+     */
+    function formatPrice(value) {
+        const n = Number(value) || 0;
+        const locale = (window.CG && CG.i18n) ? CG.i18n.locale() : 'pt-BR';
+        return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    }
+
+    /**
+     * Converte um número digitado/exibido em qualquer um dos dois
+     * formatos (",": pt-BR ou ".": en-US) para um float JS de verdade.
+     * Usado ao ler de volta campos numéricos que agora são <input type="text">
+     * formatados com formatQuantity/formatPrice (que podem conter vírgula).
+     */
+    function parseLocaleNumber(str) {
+        if (typeof str !== 'string') return Number(str) || 0;
+        return parseFloat(str.trim().replace(',', '.')) || 0;
+    }
+
     function formatMonth(yyyymm) {
         const [year, month] = yyyymm.split('-');
         const date = new Date(year, month - 1, 1);
@@ -50,8 +72,8 @@ CG.utils = (function () {
         const [y, m, d] = dateStr.split('-');
         const date = new Date(Number(y), Number(m) - 1, Number(d));
         const locale = (window.CG && CG.i18n) ? CG.i18n.locale() : 'pt-BR';
-        // pt-BR -> "23/09/26" / en-US -> "09/23/26"
-        return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: '2-digit' }).format(date);
+        // pt-BR -> "23/09/2026" / en-US -> "09/23/2026"
+        return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
     }
 
     function currentMonthKey() {
@@ -68,6 +90,8 @@ CG.utils = (function () {
     return {
         formatCurrency,
         formatQuantity,
+        formatPrice,
+        parseLocaleNumber,
         formatMonth,
         formatDateTime,
         formatDateBR,

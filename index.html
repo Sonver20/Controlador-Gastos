@@ -420,14 +420,17 @@
 
             <div>
                 <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.date">Data</label>
-                <input type="date" id="edit-date"
-                    class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
+                <div class="relative">
+                    <input type="text" id="edit-date" readonly
+                        class="w-full px-4 py-3 pr-10 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
+                    <i class="ph ph-calendar-blank absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.unit_price">Preço unitário (R$)</label>
-                    <input type="number" id="edit-unit-price" step="0.01" min="0" oninput="CG.modals.updateEditTotal()"
+                    <input type="text" inputmode="decimal" id="edit-unit-price" oninput="CG.modals.updateEditTotal()"
                         class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
                 </div>
                 <div>
@@ -435,7 +438,7 @@
                     <div class="flex items-center gap-2">
                         <button type="button" onclick="CG.modals.stepEditQty(-1)"
                             class="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
-                        <input type="number" id="edit-quantity" step="0.001" min="0.001" oninput="CG.modals.updateEditTotal()"
+                        <input type="text" inputmode="decimal" id="edit-quantity" oninput="CG.modals.updateEditTotal()"
                             class="w-full text-center px-2 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
                         <button type="button" onclick="CG.modals.stepEditQty(1)"
                             class="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">+</button>
@@ -498,7 +501,7 @@
             <!-- Saldo -->
             <div>
                 <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="balance_modal.current_balance_label">Saldo Atual (R$)</label>
-                <input type="number" id="balance-input" step="0.01"
+                <input type="text" inputmode="decimal" id="balance-input"
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition"
                     placeholder="0,00">
             </div>
@@ -506,7 +509,7 @@
             <!-- Salário -->
             <div>
                 <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="balance_modal.monthly_salary_label">Salário Mensal (R$)</label>
-                <input type="number" id="salary-input" step="0.01"
+                <input type="text" inputmode="decimal" id="salary-input"
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition"
                     placeholder="Ex: 3000,00" data-i18n-placeholder="balance_modal.salary_placeholder">
                 <p class="text-xs text-slate-400 mt-1" data-i18n="balance_modal.auto_credit_hint">Crédito automático a cada 30 dias.</p>
@@ -515,8 +518,11 @@
             <!-- Próxima data de recebimento (âncora para o calendário e o crédito automático) -->
             <div>
                 <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="balance_modal.next_date_label">Próxima data de recebimento</label>
-                <input type="date" id="next-salary-date-input"
-                    class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
+                <div class="relative">
+                    <input type="text" id="next-salary-date-input" readonly
+                        class="w-full px-4 py-3 pr-10 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
+                    <i class="ph ph-calendar-blank absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                </div>
                 <p class="text-xs text-slate-400 mt-1" data-i18n="balance_modal.next_date_hint">Usada para calcular os próximos recebimentos de 30 em 30 dias (os meses seguintes mudam de dia de acordo, já que nem todo mês tem o mesmo tamanho).</p>
             </div>
 
@@ -566,7 +572,7 @@
             <p class="text-sm text-slate-500 dark:text-slate-400" data-i18n="ferias.description">Informe o salário bruto para calcular o valor líquido das férias (inclui 1/3 constitucional, INSS e IRRF).</p>
             <div>
                 <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="ferias.gross_salary_label">Salário bruto (R$)</label>
-                <input type="number" id="ferias-salario-input" step="0.01" class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition" placeholder="5000.00">
+                <input type="text" inputmode="decimal" id="ferias-salario-input" class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition" placeholder="5000.00">
             </div>
             <button onclick="CG.calendar.calcularFerias()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition" data-i18n="ferias.calculate_button">Calcular</button>
             <div id="ferias-result" class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700"></div>
@@ -581,6 +587,7 @@
     <script src="scripts/core/toast.js"></script>
     <script src="scripts/core/i18n.js"></script>
     <script src="scripts/core/color.js"></script>
+    <script src="scripts/core/datepicker.js"></script>
     <script src="scripts/core/settings.js"></script>
     <script src="scripts/features/dashboard.js"></script>
     <script src="scripts/features/register.js"></script>

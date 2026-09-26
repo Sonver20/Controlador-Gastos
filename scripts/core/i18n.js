@@ -21,6 +21,12 @@ CG.i18n = (function () {
         en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
     };
 
+    // Domingo (0) a Sábado (6) — usado pelo calendário customizado (CG.datepicker).
+    const WEEKDAY_NAMES = {
+        pt: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+        en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    };
+
     const dict = {
         pt: {
             // Navegação
@@ -495,6 +501,11 @@ CG.i18n = (function () {
         return (MONTH_NAMES[currentLang] || MONTH_NAMES.pt)[monthIndex1to12 - 1];
     }
 
+    /** Abreviação do dia da semana (0=domingo .. 6=sábado) no idioma atual. */
+    function weekdayShort(index0to6) {
+        return (WEEKDAY_NAMES[currentLang] || WEEKDAY_NAMES.pt)[index0to6];
+    }
+
     /** Locale do Intl/Date a usar no idioma atual (formatação de datas). */
     function locale() {
         return currentLang === 'en' ? 'en-US' : 'pt-BR';
@@ -570,5 +581,5 @@ CG.i18n = (function () {
         CG.toast.show(msg, kind);
     }
 
-    return { init, apply, t, setLanguage, getLanguage, monthName, locale, showApiResult, refreshDynamicContent };
+    return { init, apply, t, setLanguage, getLanguage, monthName, weekdayShort, locale, showApiResult, refreshDynamicContent };
 })();

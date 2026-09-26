@@ -63,13 +63,13 @@ CG.register = (function () {
         row.innerHTML = `
             <input type="text" class="product-name flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
                 placeholder="${CG.i18n.t('register.product_name_placeholder')}" oninput="CG.register.updateProductsGrandTotal()">
-            <input type="number" class="product-price w-full sm:w-28 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
-                placeholder="${CG.i18n.t('register.product_price_placeholder')}" step="0.01" min="0" oninput="CG.register.updateProductsGrandTotal()">
+            <input type="text" inputmode="decimal" class="product-price w-full sm:w-28 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
+                placeholder="${CG.i18n.t('register.product_price_placeholder')}" oninput="CG.register.updateProductsGrandTotal()">
             <div class="flex items-center gap-2 justify-center">
                 <button type="button" onclick="CG.register.stepProductQty('${rowId}', -1)"
                     class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
-                <input type="number" class="product-qty w-16 text-center px-2 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
-                    value="1" step="0.001" min="0.001" oninput="CG.register.updateProductsGrandTotal()">
+                <input type="text" inputmode="decimal" class="product-qty w-16 text-center px-2 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
+                    value="1" oninput="CG.register.updateProductsGrandTotal()">
                 <button type="button" onclick="CG.register.stepProductQty('${rowId}', 1)"
                     class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">+</button>
             </div>
@@ -97,10 +97,10 @@ CG.register = (function () {
         const row = document.getElementById('reg-products-list').querySelector(`[data-row-id="${rowId}"]`);
         if (!row) return;
         const qtyInput = row.querySelector('.product-qty');
-        let qty = parseFloat(qtyInput.value) || 0;
+        let qty = CG.utils.parseLocaleNumber(qtyInput.value);
         qty = Math.max(0.001, qty + delta);
         // Arredonda para evitar sobra de ponto flutuante (ex: 1.9999999999)
-        qtyInput.value = Math.round(qty * 1000) / 1000;
+        qtyInput.value = CG.utils.formatQuantity(Math.round(qty * 1000) / 1000);
         updateProductsGrandTotal();
     }
 
@@ -108,8 +108,8 @@ CG.register = (function () {
         const rows = document.querySelectorAll('#reg-products-list .product-row');
         let grandTotal = 0;
         rows.forEach(row => {
-            const price = parseFloat(row.querySelector('.product-price').value) || 0;
-            const qty = parseFloat(row.querySelector('.product-qty').value) || 0;
+            const price = CG.utils.parseLocaleNumber(row.querySelector('.product-price').value);
+            const qty = CG.utils.parseLocaleNumber(row.querySelector('.product-qty').value);
             const subtotal = price * qty;
             row.querySelector('.product-subtotal').textContent = formatCurrency(subtotal);
             grandTotal += subtotal;
@@ -135,8 +135,8 @@ CG.register = (function () {
 
         rows.forEach(row => {
             const name = row.querySelector('.product-name').value.trim();
-            const priceStr = row.querySelector('.product-price').value.trim();
-            const qtyStr = row.querySelector('.product-qty').value.trim();
+            const priceStr = row.querySelector('.product-price').value.trim().replace(',', '.');
+            const qtyStr = row.querySelector('.product-qty').value.trim().replace(',', '.');
 
             // Linha totalmente vazia (usuário clicou em "+" e não usou) -- ignora
             if (!name && !priceStr) return;

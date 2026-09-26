@@ -58,11 +58,11 @@ theme, smooth animations and intuitive navigation.
 ### New Expense
 ![New Expense](screenshots/cadastro.png)
 
-### Expense Tree
-![Expense Tree](screenshots/arvore.png)
-
 ### Monthly Expenses
 ![Monthly Expenses](screenshots/mensais.png)
+
+### Expense Tree
+![Expense Tree](screenshots/arvore.png)
 
 ### Salary Calendar
 ![Salary Calendar](screenshots/calendario.png)

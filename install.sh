@@ -10,7 +10,7 @@
 #   - Registra o app no menu do Ubuntu
 #
 # Como usar:
-#   cd ~/Meus-Projetos/Controlador-Gastos (Ajuste se não for onde quer)
+#   cd ~/Meus-Projetos/Controlador-Gastos
 #   chmod +x install.sh
 #   ./install.sh
 # =============================================================================

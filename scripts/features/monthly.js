@@ -153,13 +153,13 @@ CG.monthly = (function () {
             <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                 <input type="text" class="mi-name flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
                     placeholder="${CG.i18n.t('monthly.item_name_placeholder')}" oninput="CG.monthly.updateFormTotal()">
-                <input type="number" class="mi-price w-full sm:w-28 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
-                    placeholder="${CG.i18n.t('monthly.item_price_placeholder')}" step="0.01" min="0" oninput="CG.monthly.updateFormTotal()">
+                <input type="text" inputmode="decimal" class="mi-price w-full sm:w-28 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
+                    placeholder="${CG.i18n.t('monthly.item_price_placeholder')}" oninput="CG.monthly.updateFormTotal()">
                 <div class="flex items-center gap-2 justify-center">
                     <button type="button" onclick="CG.monthly.stepItemQty('${rowId}', -1)"
                         class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
-                    <input type="number" class="mi-qty w-16 text-center px-2 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
-                        value="1" step="0.001" min="0.001" oninput="CG.monthly.updateFormTotal()">
+                    <input type="text" inputmode="decimal" class="mi-qty w-16 text-center px-2 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
+                        value="1" oninput="CG.monthly.updateFormTotal()">
                     <button type="button" onclick="CG.monthly.stepItemQty('${rowId}', 1)"
                         class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">+</button>
                 </div>
@@ -176,8 +176,8 @@ CG.monthly = (function () {
             row.querySelector('.mi-category').value = preset.category || '';
             row.querySelector('.mi-subcategory').value = preset.subcategory || '';
             row.querySelector('.mi-name').value = preset.description || '';
-            row.querySelector('.mi-price').value = preset.unit_price || '';
-            row.querySelector('.mi-qty').value = preset.quantity || '1';
+            row.querySelector('.mi-price').value = preset.unit_price ? CG.utils.formatPrice(preset.unit_price) : '';
+            row.querySelector('.mi-qty').value = CG.utils.formatQuantity(preset.quantity || 1);
         }
         updateFormTotal();
     }
@@ -194,9 +194,9 @@ CG.monthly = (function () {
         const row = document.getElementById('monthly-items-list').querySelector(`[data-row-id="${rowId}"]`);
         if (!row) return;
         const qtyInput = row.querySelector('.mi-qty');
-        let qty = parseFloat(qtyInput.value) || 0;
+        let qty = CG.utils.parseLocaleNumber(qtyInput.value);
         qty = Math.max(0.001, qty + delta);
-        qtyInput.value = Math.round(qty * 1000) / 1000;
+        qtyInput.value = CG.utils.formatQuantity(Math.round(qty * 1000) / 1000);
         updateFormTotal();
     }
 
@@ -204,8 +204,8 @@ CG.monthly = (function () {
         const rows = document.querySelectorAll('#monthly-items-list .monthly-item-row');
         let grandTotal = 0;
         rows.forEach(row => {
-            const price = parseFloat(row.querySelector('.mi-price').value) || 0;
-            const qty = parseFloat(row.querySelector('.mi-qty').value) || 0;
+            const price = CG.utils.parseLocaleNumber(row.querySelector('.mi-price').value);
+            const qty = CG.utils.parseLocaleNumber(row.querySelector('.mi-qty').value);
             const subtotal = price * qty;
             row.querySelector('.mi-subtotal').textContent = formatCurrency(subtotal);
             grandTotal += subtotal;
@@ -228,8 +228,8 @@ CG.monthly = (function () {
             const category = row.querySelector('.mi-category').value.trim();
             const subcategory = row.querySelector('.mi-subcategory').value.trim();
             const description = row.querySelector('.mi-name').value.trim();
-            const priceStr = row.querySelector('.mi-price').value.trim();
-            const qtyStr = row.querySelector('.mi-qty').value.trim();
+            const priceStr = row.querySelector('.mi-price').value.trim().replace(',', '.');
+            const qtyStr = row.querySelector('.mi-qty').value.trim().replace(',', '.');
 
             // Linha totalmente vazia (clicou em "+" e não usou) -- ignora
             if (!category && !description && !priceStr) return;

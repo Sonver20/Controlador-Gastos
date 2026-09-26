@@ -110,8 +110,14 @@ CG.color = (function () {
     function apply(value) {
         const scale = paletteFor(value);
         // Atribuir aqui já dispara a recompilação do Tailwind (ver
-        // comentário no topo do arquivo).
-        tailwind.config.theme.extend.colors.primary = scale;
+        // comentário no topo do arquivo). Guardado com try/catch porque,
+        // se o assets/tailwind.js não tiver carregado por algum motivo,
+        // isso não pode derrubar o resto da inicialização do app.
+        try {
+            tailwind.config.theme.extend.colors.primary = scale;
+        } catch (e) {
+            console.error('Falha ao aplicar cor principal (Tailwind indisponível?):', e);
+        }
         highlightActive(value);
     }
 

@@ -106,7 +106,7 @@ CG.calendar = (function () {
             const res = await CG.api.call('get_salary');
             const input = document.getElementById('ferias-salario-input');
             if (res.success && res.salary > 0) {
-                input.value = res.salary;
+                input.value = CG.utils.formatPrice(res.salary);
                 calcularFerias();
             } else {
                 input.value = '';
@@ -125,7 +125,7 @@ CG.calendar = (function () {
 
     async function calcularFerias() {
         const input = document.getElementById('ferias-salario-input');
-        const salarioStr = input.value.trim();
+        const salarioStr = input.value.trim().replace(',', '.');
         const salario = parseFloat(salarioStr);
         const resultDiv = document.getElementById('ferias-result');
 

@@ -23,9 +23,9 @@ CG.modals = (function () {
             document.getElementById('edit-category').value = res.data.category;
             document.getElementById('edit-subcategory').value = res.data.subcategory || '';
             document.getElementById('edit-description').value = res.data.description;
-            document.getElementById('edit-date').value = res.data.created_at.split(' ')[0];
-            document.getElementById('edit-unit-price').value = res.data.unit_price;
-            document.getElementById('edit-quantity').value = res.data.quantity;
+            CG.datepicker.setValue('edit-date', res.data.created_at.split(' ')[0]);
+            document.getElementById('edit-unit-price').value = CG.utils.formatPrice(res.data.unit_price);
+            document.getElementById('edit-quantity').value = CG.utils.formatQuantity(res.data.quantity);
             updateEditTotal();
 
             document.getElementById('edit-modal').classList.remove('hidden');
@@ -42,15 +42,15 @@ CG.modals = (function () {
 
     function stepEditQty(delta) {
         const qtyInput = document.getElementById('edit-quantity');
-        let qty = parseFloat(qtyInput.value) || 0;
+        let qty = CG.utils.parseLocaleNumber(qtyInput.value);
         qty = Math.max(0.001, qty + delta);
-        qtyInput.value = Math.round(qty * 1000) / 1000;
+        qtyInput.value = CG.utils.formatQuantity(Math.round(qty * 1000) / 1000);
         updateEditTotal();
     }
 
     function updateEditTotal() {
-        const price = parseFloat(document.getElementById('edit-unit-price').value) || 0;
-        const qty = parseFloat(document.getElementById('edit-quantity').value) || 0;
+        const price = CG.utils.parseLocaleNumber(document.getElementById('edit-unit-price').value);
+        const qty = CG.utils.parseLocaleNumber(document.getElementById('edit-quantity').value);
         document.getElementById('edit-total-display').textContent = formatCurrency(price * qty);
     }
 
@@ -59,9 +59,11 @@ CG.modals = (function () {
         const category = document.getElementById('edit-category').value.trim();
         const subcategory = document.getElementById('edit-subcategory').value.trim();
         const description = document.getElementById('edit-description').value.trim();
-        const dateVal = document.getElementById('edit-date').value;
-        const unitPriceStr = document.getElementById('edit-unit-price').value.trim();
-        const quantityStr = document.getElementById('edit-quantity').value.trim();
+        const dateVal = CG.datepicker.getValue('edit-date');
+        // Normaliza vírgula -> ponto (o campo pode estar exibindo formatado
+        // em pt-BR) antes de validar e enviar pro backend.
+        const unitPriceStr = document.getElementById('edit-unit-price').value.trim().replace(',', '.');
+        const quantityStr = document.getElementById('edit-quantity').value.trim().replace(',', '.');
 
         const price = parseFloat(unitPriceStr);
         const qty = parseFloat(quantityStr);

@@ -12,16 +12,19 @@ CG.settings = (function () {
     const popover = () => document.getElementById('settings-popover');
 
     function open() {
-        popover().classList.remove('hidden');
+        const pop = popover();
+        if (pop) pop.classList.remove('hidden');
     }
 
     function close() {
-        popover().classList.add('hidden');
+        const pop = popover();
+        if (pop) pop.classList.add('hidden');
     }
 
     function toggle(e) {
         e.stopPropagation();
-        popover().classList.toggle('hidden');
+        const pop = popover();
+        if (pop) pop.classList.toggle('hidden');
     }
 
     function highlightLanguage() {
@@ -59,14 +62,16 @@ CG.settings = (function () {
     function initOutsideClickToClose() {
         document.addEventListener('click', (e) => {
             const pop = popover();
-            if (pop.classList.contains('hidden')) return;
-            if (pop.contains(e.target) || e.target === btn() || btn().contains(e.target)) return;
+            const settingsBtn = btn();
+            if (!pop || pop.classList.contains('hidden')) return;
+            if (pop.contains(e.target) || (settingsBtn && (e.target === settingsBtn || settingsBtn.contains(e.target)))) return;
             close();
         });
     }
 
     async function init() {
-        btn().addEventListener('click', toggle);
+        const settingsBtn = btn();
+        if (settingsBtn) settingsBtn.addEventListener('click', toggle);
         initLanguageButtons();
         initColorSwatches();
         initOutsideClickToClose();

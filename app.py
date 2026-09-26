@@ -13,6 +13,7 @@ impostos), delega para o servico correspondente em services/.
 import os
 from decimal import Decimal
 from functools import wraps
+
 import webview
 from database import Database
 from config import Config

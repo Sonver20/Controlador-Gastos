@@ -95,7 +95,24 @@ window.CG = window.CG || {};
         // método do backend.
         CG.api.waitReady().then(async () => {
             CG.theme.init();
-            await CG.settings.init(); // idioma (CG.i18n) + cor principal (CG.color)
+
+            // Configurações (idioma/cor) e o seletor de data são "nice to
+            // have": se algum dos dois falhar, não pode travar o carregamento
+            // dos dados reais (saldo, despesas) — por isso cada bloco tem seu
+            // próprio try/catch em vez de deixar o erro subir e cancelar tudo
+            // que vem depois.
+            try {
+                await CG.settings.init(); // idioma (CG.i18n) + cor principal (CG.color)
+            } catch (e) {
+                console.error('Falha ao iniciar configurações (idioma/cor):', e);
+            }
+            try {
+                CG.datepicker.attach('edit-date');
+                CG.datepicker.attach('next-salary-date-input');
+            } catch (e) {
+                console.error('Falha ao iniciar seletor de data:', e);
+            }
+
             CG.balance.load();      // saldo no header
             CG.dashboard.load();
             CG.register.loadCategoryList();
@@ -103,8 +120,13 @@ window.CG = window.CG || {};
             checkAutoSalary();      // crédito automático de salário
             CG.monthly.checkAuto(); // lançamento automático de despesas mensais
             loadAppVersion();
-        }).catch(() => {
-            toast.show(CG.i18n.t('main.init_error'), 'error');
+        }).catch((e) => {
+            console.error('Erro de inicialização do app:', e);
+            try {
+                toast.show(CG.i18n.t('main.init_error'), 'error');
+            } catch (e2) {
+                toast.show('Erro de inicialização do app.', 'error');
+            }
         });
     });
 })();

@@ -18,7 +18,6 @@ Depende apenas de `database.Database` (injetada no construtor) para
 persistencia -- nunca executa SQL diretamente.
 """
 
-import re
 import sqlite3
 from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP

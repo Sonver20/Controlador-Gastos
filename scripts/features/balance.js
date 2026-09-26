@@ -46,10 +46,10 @@ CG.balance = (function () {
             const salRes = await CG.api.call('get_salary');
             const vacRes = await CG.api.call('get_vacation_month');
             if (balRes.success) {
-                document.getElementById('balance-input').value = Number(balRes.balance) !== 0 ? balRes.balance : '';
+                document.getElementById('balance-input').value = Number(balRes.balance) !== 0 ? CG.utils.formatPrice(balRes.balance) : '';
             }
             if (salRes.success) {
-                document.getElementById('salary-input').value = Number(salRes.salary) !== 0 ? salRes.salary : '';
+                document.getElementById('salary-input').value = Number(salRes.salary) !== 0 ? CG.utils.formatPrice(salRes.salary) : '';
                 const salaryDisplay = document.getElementById('salary-display');
                 if (salaryDisplay) {
                     salaryDisplay.textContent = salRes.salary > 0
@@ -57,7 +57,7 @@ CG.balance = (function () {
                         : CG.i18n.t('balance_modal.no_salary_configured');
                 }
                 const nextDate = computeNextSalaryDate(salRes.last_salary_date);
-                document.getElementById('next-salary-date-input').value = nextDate ? nextDate.toISOString().slice(0, 10) : '';
+                CG.datepicker.setValue('next-salary-date-input', nextDate ? nextDate.toISOString().slice(0, 10) : '');
             }
             if (vacRes.success) {
                 document.getElementById('vacation-month-input').value = vacRes.month;
@@ -68,10 +68,10 @@ CG.balance = (function () {
     }
 
     async function submit() {
-        const balanceVal = document.getElementById('balance-input').value.trim();
-        const salaryVal = document.getElementById('salary-input').value.trim();
+        const balanceVal = document.getElementById('balance-input').value.trim().replace(',', '.');
+        const salaryVal = document.getElementById('salary-input').value.trim().replace(',', '.');
         const vacationVal = document.getElementById('vacation-month-input').value;
-        const nextDateVal = document.getElementById('next-salary-date-input').value;
+        const nextDateVal = CG.datepicker.getValue('next-salary-date-input');
 
         // String crua vai para o Python (Decimal); parseFloat aqui é só validação.
         const balanceStr = balanceVal === '' ? '0' : balanceVal;

@@ -23,6 +23,19 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/)
   a convenção de separador decimal/milhar (1.234,56 → 1,234.56) e a
   ordem/formato de datas e horas (23/09/26 14:05 → 09/23/26 02:05 PM),
   via `Intl.NumberFormat`/`Intl.DateTimeFormat`.
+- **Calendário próprio para seleção de data**: os campos de data (modal
+  de Editar Despesa e modal de Saldo & Salário) deixaram de usar
+  `<input type="date">` nativo, que o WebKitGTK sempre exibe no formato
+  do idioma do sistema operacional (não do idioma escolhido no app).
+  Novo `scripts/core/datepicker.js` substitui por um calendário próprio
+  (popover), totalmente traduzido, que respeita o idioma selecionado.
+  Pelo mesmo motivo (inputs nativos seguem o locale do SO, não o do
+  app), todos os campos de quantidade e preço unitário/salário/saldo do
+  app — Editar Despesa, Nova Despesa, Despesas Mensais, Saldo &
+  Salário e Calcular Férias — passaram de `<input type="number">` para
+  texto (`inputmode="decimal"`) formatado via
+  `CG.utils.formatQuantity`/`formatPrice`, aceitando tanto vírgula
+  quanto ponto na hora de digitar (`CG.utils.parseLocaleNumber`).
 - **Cor principal personalizável**: no mesmo painel de Configurações,
   5 paletas prontas (roxo/violeta — padrão e cor histórica do app, azul,
   verde, vermelho, laranja) ou uma cor customizada via seletor de cor,
@@ -32,11 +45,33 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/)
   o Tailwind (`assets/tailwind.js`) recompila ao vivo quando
   `tailwind.config` muda.
 
+### Corrigido
+- **Dashboard/despesas não carregavam**: a sequência de inicialização
+  em `main.js` chamava `await CG.settings.init()` (idioma + cor) antes
+  de `CG.dashboard.load()` sem isolar erros — se qualquer coisa nesse
+  passo falhasse, a exceção cancelava toda a fila de inicialização
+  seguinte, deixando a tela sem despesas mesmo com o banco intacto.
+  Cada etapa (configurações, seletor de data) agora tem seu próprio
+  `try/catch`, então uma falha ali não impede mais o carregamento de
+  saldo/despesas. Também blindados: `CG.settings` contra
+  `#btn-settings`/`#settings-popover` ausentes do DOM, e `CG.color`
+  contra o Tailwind ainda não estar pronto.
+
+### Removido
+- **Resíduos do "Parser de Texto"**: essa funcionalidade (extrair
+  despesas a partir de texto colado) já constava como removida da
+  interface desde a v3.0.0, mas o código ainda tinha sobras. Removidos
+  por completo: `parse_raw_text` e `save_parsed_expenses` de `app.py` e
+  `services/finance.py` (incluindo o `import re`, que só servia a
+  eles), e os testes correspondentes em `tests.py` — a classe
+  `TestDatabaseRawParser` inteira e os casos de borda/Api relacionados
+  espalhados em outras classes (17 testes no total).
+
 ### Verificado
 - Investigado o relato de que excluir uma despesa não devolveria o
   valor ao saldo: revisão de ponta a ponta (`modals.js` → `app.py` →
   `services/finance.py` → `database.py`) e a suíte de testes completa
-  (170 testes, incluindo casos dedicados a esse cenário) não reproduziu
+  (153 testes, incluindo casos dedicados a esse cenário) não reproduziu
   o problema — o comportamento correto já está em vigor desde a correção
   da v2.2.0.
 
