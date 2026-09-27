@@ -47,8 +47,8 @@
                         <i class="ph ph-pencil-simple text-sm"></i>
                     </button>
                 </div>
-                <button id="btn-theme" class="p-2 rounded-lg hover:bg-white/20 transition" title="Alternar tema" data-i18n-title="header.theme_toggle_title">
-                    <i class="ph ph-moon text-xl" id="icon-theme"></i>
+                <button id="btn-settings" class="p-2 rounded-lg hover:bg-white/20 transition" title="Configurações" data-i18n-title="settings.title">
+                    <i class="ph ph-gear text-xl"></i>
                 </button>
             </div>
         </div>
@@ -82,39 +82,11 @@
                 </button>
             </nav>
 
-            <!-- Footer info + Configurações -->
-            <div class="mt-auto p-4 border-t border-slate-200 dark:border-slate-700 relative">
-                <div id="settings-popover" class="hidden absolute bottom-full left-4 mb-2 w-64 bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-4 z-50">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2" data-i18n="settings.language_label">Idioma</p>
-                        <div class="flex gap-2">
-                            <button type="button" class="lang-btn flex-1 px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-lang="pt">Português</button>
-                            <button type="button" class="lang-btn flex-1 px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-lang="en">English</button>
-                        </div>
-                    </div>
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2" data-i18n="settings.color_label">Cor principal</p>
-                        <div class="flex items-center gap-2.5 flex-wrap">
-                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-violet-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="violet" title="Roxo"></button>
-                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-blue-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="blue" title="Azul"></button>
-                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-emerald-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="emerald" title="Verde"></button>
-                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-red-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="red" title="Vermelho"></button>
-                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-orange-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="orange" title="Laranja"></button>
-                            <label class="color-swatch-btn w-8 h-8 rounded-full overflow-hidden cursor-pointer border border-slate-300 dark:border-slate-600 relative ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" title="Personalizada" data-i18n-title="settings.color_custom_label">
-                                <i class="ph ph-palette absolute inset-0 flex items-center justify-center text-slate-500 dark:text-slate-300 pointer-events-none"></i>
-                                <input type="color" id="settings-color-custom" class="opacity-0 absolute -top-1 -left-1 w-10 h-10 cursor-pointer border-0 p-0">
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center justify-between">
-                    <button id="btn-settings" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition text-slate-500 dark:text-slate-400 shrink-0" title="Configurações" data-i18n-title="settings.title">
-                        <i class="ph ph-gear text-xl"></i>
-                    </button>
-                    <p id="app-version-footer" class="text-xs text-slate-400 dark:text-slate-500 text-right leading-tight">
-                        Controlador de Gastos<br>PyWebView Desktop
-                    </p>
-                </div>
+            <!-- Footer info (a engrenagem de Configurações agora fica no cabeçalho, #btn-settings) -->
+            <div class="mt-auto p-4 border-t border-slate-200 dark:border-slate-700">
+                <p id="app-version-footer" class="text-xs text-slate-400 dark:text-slate-500 text-center leading-tight">
+                    Controlador de Gastos<br>PyWebView Desktop
+                </p>
             </div>
         </aside>
 
@@ -579,14 +551,92 @@
         </div>
     </div>
 
+    <!-- ==================== SETTINGS MODAL ==================== -->
+    <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-2xl mx-4 flex flex-col sm:flex-row overflow-hidden transform transition-all" style="max-height: 85vh;">
+
+            <!-- Categorias (só "Geral" por enquanto -- pensado para crescer) -->
+            <nav class="sm:w-44 shrink-0 border-b sm:border-b-0 sm:border-r border-slate-200 dark:border-slate-700 p-3 flex sm:flex-col gap-1 overflow-x-auto sm:overflow-x-visible">
+                <button type="button" class="settings-category-btn flex items-center gap-2 px-3 py-2.5 rounded-xl text-left text-sm font-medium transition whitespace-nowrap bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300" data-category="general">
+                    <i class="ph ph-sliders-horizontal text-lg"></i>
+                    <span data-i18n="settings.category_general">Geral</span>
+                </button>
+            </nav>
+
+            <!-- Conteúdo da categoria selecionada -->
+            <div class="flex-1 flex flex-col min-w-0">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
+                    <h3 class="text-lg font-bold" data-i18n="settings.title">Configurações</h3>
+                    <button id="settings-close" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <div id="settings-category-general" class="settings-category-panel p-5 space-y-5 overflow-y-auto">
+                    <!-- Tema -->
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2" data-i18n="settings.theme_label">Tema</p>
+                        <div class="flex gap-2">
+                            <button type="button" class="theme-btn flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-theme="light">
+                                <i class="ph ph-sun"></i> <span data-i18n="settings.theme_light">Claro</span>
+                            </button>
+                            <button type="button" class="theme-btn flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-theme="dark">
+                                <i class="ph ph-moon"></i> <span data-i18n="settings.theme_dark">Escuro</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Idioma -->
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2" data-i18n="settings.language_label">Idioma</p>
+                        <div class="flex gap-2">
+                            <button type="button" class="lang-btn flex-1 px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-lang="pt">Português</button>
+                            <button type="button" class="lang-btn flex-1 px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-lang="en">English</button>
+                        </div>
+                    </div>
+
+                    <!-- Cor principal -->
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2" data-i18n="settings.color_label">Cor principal</p>
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-violet-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="violet" title="Roxo"></button>
+                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-blue-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="blue" title="Azul"></button>
+                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-emerald-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="emerald" title="Verde"></button>
+                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-red-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="red" title="Vermelho"></button>
+                            <button type="button" class="color-swatch-btn w-8 h-8 rounded-full bg-orange-500 ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" data-color="orange" title="Laranja"></button>
+                            <label class="color-swatch-btn w-8 h-8 rounded-full overflow-hidden cursor-pointer border border-slate-300 dark:border-slate-600 relative ring-offset-2 ring-offset-card-light dark:ring-offset-card-dark transition" title="Personalizada" data-i18n-title="settings.color_custom_label">
+                                <i class="ph ph-palette absolute inset-0 flex items-center justify-center text-slate-500 dark:text-slate-300 pointer-events-none"></i>
+                                <input type="color" id="settings-color-custom" class="opacity-0 absolute -top-1 -left-1 w-10 h-10 cursor-pointer border-0 p-0">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Moeda -->
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2" data-i18n="settings.currency_label">Moeda</p>
+                        <div class="flex gap-2 flex-wrap">
+                            <button type="button" class="currency-btn px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-currency="BRL" data-i18n="settings.currency_brl">Real (R$)</button>
+                            <button type="button" class="currency-btn px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-currency="USD" data-i18n="settings.currency_usd">Dólar Americano (US$)</button>
+                            <button type="button" class="currency-btn px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-currency="EUR" data-i18n="settings.currency_eur">Euro (€)</button>
+                            <button type="button" class="currency-btn px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-currency="GBP" data-i18n="settings.currency_gbp">Libra Esterlina (£)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts (módulos) -->
     <script src="scripts/core/utils.js"></script>
     <script src="scripts/core/state.js"></script>
     <script src="scripts/core/api.js"></script>
     <script src="scripts/core/theme.js"></script>
     <script src="scripts/core/toast.js"></script>
+    <script src="scripts/core/locales/pt_BR.js"></script>
+    <script src="scripts/core/locales/en.js"></script>
     <script src="scripts/core/i18n.js"></script>
     <script src="scripts/core/color.js"></script>
+    <script src="scripts/core/currency.js"></script>
     <script src="scripts/core/datepicker.js"></script>
     <script src="scripts/core/settings.js"></script>
     <script src="scripts/features/dashboard.js"></script>

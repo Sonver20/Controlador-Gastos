@@ -1163,46 +1163,51 @@ class TestConfig(unittest.TestCase):
             os.unlink(self.config_path)
         os.rmdir(self.tmpdir)
 
-    def test_get_theme_default(self):
-        res = self.cfg.get_theme()
-        self.assertTrue(res["success"])
-        self.assertEqual(res["theme"], "light")
+    def test_theme_default(self):
+        self.assertEqual(self.cfg.theme, "light")
 
     def test_set_theme(self):
-        res = self.cfg.set_theme("dark")
-        self.assertTrue(res["success"])
+        self.cfg.theme = "dark"
         # Recarrega do disco
         cfg2 = Config(config_path=self.config_path)
-        theme = cfg2.get_theme()
-        self.assertEqual(theme["theme"], "dark")
+        self.assertEqual(cfg2.theme, "dark")
 
-    def test_get_language_default(self):
-        res = self.cfg.get_language()
-        self.assertTrue(res["success"])
-        self.assertEqual(res["language"], "pt")
+    def test_language_default(self):
+        self.assertEqual(self.cfg.language, "pt")
 
     def test_set_language(self):
-        res = self.cfg.set_language("en")
-        self.assertTrue(res["success"])
+        self.cfg.language = "en"
         cfg2 = Config(config_path=self.config_path)
-        self.assertEqual(cfg2.get_language()["language"], "en")
+        self.assertEqual(cfg2.language, "en")
 
-    def test_get_primary_color_default(self):
-        res = self.cfg.get_primary_color()
-        self.assertTrue(res["success"])
-        self.assertEqual(res["color"], "violet")
+    def test_primary_color_default(self):
+        self.assertEqual(self.cfg.primary_color, "violet")
 
     def test_set_primary_color_preset(self):
-        res = self.cfg.set_primary_color("blue")
-        self.assertTrue(res["success"])
+        self.cfg.primary_color = "blue"
         cfg2 = Config(config_path=self.config_path)
-        self.assertEqual(cfg2.get_primary_color()["color"], "blue")
+        self.assertEqual(cfg2.primary_color, "blue")
 
     def test_set_primary_color_custom_hex(self):
-        res = self.cfg.set_primary_color("#ff8800")
-        self.assertTrue(res["success"])
+        self.cfg.primary_color = "#ff8800"
         cfg2 = Config(config_path=self.config_path)
-        self.assertEqual(cfg2.get_primary_color()["color"], "#ff8800")
+        self.assertEqual(cfg2.primary_color, "#ff8800")
+
+    def test_currency_default(self):
+        self.assertEqual(self.cfg.currency, "BRL")
+
+    def test_set_currency(self):
+        self.cfg.currency = "USD"
+        cfg2 = Config(config_path=self.config_path)
+        self.assertEqual(cfg2.currency, "USD")
+
+    def test_vacation_month_default(self):
+        self.assertEqual(self.cfg.vacation_month, 7)
+
+    def test_set_vacation_month(self):
+        self.cfg.vacation_month = 12
+        cfg2 = Config(config_path=self.config_path)
+        self.assertEqual(cfg2.vacation_month, 12)
 
     def test_get_set_custom_key(self):
         self.cfg.set("custom_key", "custom_value")
@@ -1215,10 +1220,10 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(self.cfg.get("missing", "default"), "default")
 
     def test_persistence_survives_reinit(self):
-        self.cfg.set_theme("dark")
+        self.cfg.theme = "dark"
         self.cfg.set("language", "pt-BR")
         cfg2 = Config(config_path=self.config_path)
-        self.assertEqual(cfg2.get_theme()["theme"], "dark")
+        self.assertEqual(cfg2.theme, "dark")
         self.assertEqual(cfg2.get("language"), "pt-BR")
 
 
@@ -1348,6 +1353,22 @@ class TestApiBridge(unittest.TestCase):
         json.dumps(payload)  # nao deve levantar excecao
         payload2 = self.api.calcular_ferias("5000")
         json.dumps(payload2)
+
+    def test_api_get_currency_default(self):
+        res = self.api.get_currency()
+        self.assertTrue(res["success"])
+        self.assertEqual(res["currency"], "BRL")
+
+    def test_api_set_currency(self):
+        set_res = self.api.set_currency("USD")
+        self.assertTrue(set_res["success"])
+        self.assertEqual(self.api.get_currency()["currency"], "USD")
+
+    def test_api_get_set_vacation_month(self):
+        self.assertEqual(self.api.get_vacation_month()["month"], 7)
+        set_res = self.api.set_vacation_month(12)
+        self.assertTrue(set_res["success"])
+        self.assertEqual(self.api.get_vacation_month()["month"], 12)
 
 
 # =============================================================================

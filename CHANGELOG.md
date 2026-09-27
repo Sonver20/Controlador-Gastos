@@ -6,6 +6,55 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/)
 (`MAJOR.MINOR.PATCH`) a partir da versão 2.0.0.
 
+## [3.2.0] - 2026-09-27
+
+### Adicionado
+- **Moeda de exibição configurável**: no painel de Configurações (Geral),
+  novo seletor de moeda (Real, Dólar Americano, Euro, Libra Esterlina)
+  para quem usa o app em outro idioma e não lida em Reais no dia a dia.
+  É só formatação — o número digitado não muda, apenas o símbolo/código
+  exibido (`Intl.NumberFormat` já sabe renderizar o símbolo certo por
+  locale a partir do código ISO 4217 configurado). Nesta primeira versão
+  a lista fica limitada a moedas comuns de 2 casas decimais (moedas que
+  funcionam diferente, como o Iene, ficam de fora por enquanto). Novo
+  `scripts/core/currency.js`; `config.py` ganha `currency` (padrão
+  `"BRL"`) e `app.py` ganha `get_currency`/`set_currency`. O cálculo de
+  férias (INSS/IRRF) continua sendo feito com tributos brasileiros
+  independente da moeda de exibição escolhida — trocar o símbolo não
+  muda a legislação usada no cálculo.
+
+### Modificado
+- **Configurações reorganizadas em uma janela própria**: a engrenagem
+  saiu do rodapé da barra lateral (onde abria um mini popover) e foi
+  para o cabeçalho, no lugar onde ficava o botão de alternar tema
+  claro/escuro. Clicar nela agora abre uma janela no mesmo formato dos
+  outros modais do app (Editar Despesa, Saldo & Salário, Calcular
+  Férias), com um menu de categorias à esquerda — só "Geral" por
+  enquanto, já pensado para crescer — reunindo tema, idioma, cor
+  principal e a nova moeda de exibição. Como o tema deixou de ter um
+  botão de alternância dedicado no cabeçalho, ele agora é escolhido por
+  dois botões explícitos ("Claro"/"Escuro") dentro dessa janela, no
+  mesmo padrão dos botões de idioma e cor (`scripts/core/theme.js`
+  reescrito nesse sentido; `CG.theme.toggle()` continua disponível por
+  compatibilidade).
+- **`config.py` refatorado para eliminar repetição**: os pares
+  `get_x()`/`set_x()` (um por preferência, todos idênticos exceto pelo
+  nome da chave) deram lugar a um único descriptor `ConfigProperty`,
+  reutilizado por `theme`, `language`, `primary_color`, `currency` e
+  `vacation_month` — cada preferência agora é só uma `property` (ex.:
+  `cfg.theme`, `cfg.theme = "dark"`). O "success"/mensagem que o
+  frontend recebe deixou de morar em `Config` (que agora é só
+  armazenamento cru) e passou para a ponte com o JS em `app.py`, que já
+  usava esses métodos.
+- **i18n reorganizado em `scripts/core/locales/`**: o dicionário
+  PT/EN, que vivia inteiro dentro de `i18n.js` (incluindo nomes de
+  meses e dias da semana), foi separado em `locales/pt_BR.js` e
+  `locales/en.js` — um arquivo por idioma, cada um só uma declaração de
+  dados (`CG.locales.pt`/`CG.locales.en`). `i18n.js` ficou menor e passou
+  a só carregar/gerenciar esses locales (idioma ativo, `t()`, `apply()`,
+  `monthName()`, `weekdayShort()`), sem guardar nenhuma tradução
+  diretamente.
+
 ## [3.1.0] - 2026-09-22
 
 ### Adicionado

@@ -6,14 +6,19 @@ window.CG = window.CG || {};
 
 CG.utils = (function () {
     function formatCurrency(value) {
-        // O valor continua em Reais (BRL) independente do idioma da
-        // interface — é o que o app calcula e o que está no banco. O que
-        // muda em inglês é só a convenção de separador de milhar/decimal
-        // (1.234,56 em pt-BR vira 1,234.56 em en-US), via Intl.
+        // O valor numérico não muda com o idioma nem com a moeda de
+        // exibição escolhida (CG.currency) — é o que o app calcula e o
+        // que está no banco. O que muda é só a apresentação: em inglês,
+        // a convenção de separador de milhar/decimal (1.234,56 em pt-BR
+        // vira 1,234.56 em en-US); a moeda troca o símbolo/código
+        // exibido (ex.: R$, US$, €), sem nenhuma conversão de valor —
+        // Intl.NumberFormat resolve os dois a partir do locale e do
+        // código ISO 4217 configurados.
         const locale = (window.CG && CG.i18n) ? CG.i18n.locale() : 'pt-BR';
+        const currency = (window.CG && CG.currency) ? CG.currency.getCode() : 'BRL';
         return new Intl.NumberFormat(locale, {
             style: 'currency',
-            currency: 'BRL'
+            currency: currency
         }).format(value || 0);
     }
 

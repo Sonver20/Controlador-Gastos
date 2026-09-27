@@ -50,6 +50,7 @@ window.CG = window.CG || {};
                 CG.modals.closeDelete();
                 CG.balance.closeModal();
                 CG.calendar.closeFeriasModal();
+                CG.settings.close();
             }
         });
     }
@@ -96,15 +97,15 @@ window.CG = window.CG || {};
         CG.api.waitReady().then(async () => {
             CG.theme.init();
 
-            // Configurações (idioma/cor) e o seletor de data são "nice to
-            // have": se algum dos dois falhar, não pode travar o carregamento
-            // dos dados reais (saldo, despesas) — por isso cada bloco tem seu
-            // próprio try/catch em vez de deixar o erro subir e cancelar tudo
-            // que vem depois.
+            // Configurações (idioma/cor/moeda) e o seletor de data são "nice
+            // to have": se algum dos dois falhar, não pode travar o
+            // carregamento dos dados reais (saldo, despesas) — por isso cada
+            // bloco tem seu próprio try/catch em vez de deixar o erro subir e
+            // cancelar tudo que vem depois.
             try {
-                await CG.settings.init(); // idioma (CG.i18n) + cor principal (CG.color)
+                await CG.settings.init(); // idioma (CG.i18n) + cor principal (CG.color) + moeda (CG.currency)
             } catch (e) {
-                console.error('Falha ao iniciar configurações (idioma/cor):', e);
+                console.error('Falha ao iniciar configurações (idioma/cor/moeda):', e);
             }
             try {
                 CG.datepicker.attach('edit-date');

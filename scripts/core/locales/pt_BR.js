@@ -1,0 +1,258 @@
+/**
+ * scripts/core/locales/pt_BR.js - Traduções em Português (Brasil).
+ *
+ * Uma das fontes de dados que scripts/core/i18n.js carrega e gerencia.
+ * Não faz nada sozinho: só declara `CG.locales.pt` com três blocos:
+ *   - `months`: nomes dos meses (1-12), usado por CG.utils.formatMonth
+ *     via CG.i18n.monthName().
+ *   - `weekdaysShort`: abreviação dos dias da semana (0=domingo..6=sábado),
+ *     usado pelo calendário customizado (CG.datepicker) via
+ *     CG.i18n.weekdayShort().
+ *   - `strings`: o dicionário chave -> texto usado por CG.i18n.t() /
+ *     apply() (elementos com data-i18n) e por CG.i18n.showApiResult()
+ *     (mensagens vindas do backend, que trazem uma `key` opcional).
+ *
+ * Precisa carregar ANTES de scripts/core/i18n.js no index.html.
+ */
+window.CG = window.CG || {};
+CG.locales = CG.locales || {};
+
+CG.locales.pt = {
+    months: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+    weekdaysShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+
+    strings: {
+        // Navegação
+        'nav.dashboard': 'Dashboard',
+        'nav.register': 'Nova Despesa',
+        'nav.monthly': 'Despesas Mensais',
+        'nav.tree': 'Árvore de Gastos',
+        'nav.calendar': 'Calendário',
+
+        // Cabeçalho
+        'header.balance_label': 'Saldo',
+        'header.edit_balance_title': 'Editar saldo',
+
+        // Configurações (engrenagem)
+        'settings.title': 'Configurações',
+        'settings.category_general': 'Geral',
+        'settings.theme_label': 'Tema',
+        'settings.theme_light': 'Claro',
+        'settings.theme_dark': 'Escuro',
+        'settings.language_label': 'Idioma',
+        'settings.color_label': 'Cor principal',
+        'settings.color_custom_label': 'Personalizada',
+        'settings.currency_label': 'Moeda',
+        'settings.currency_brl': 'Real (R$)',
+        'settings.currency_usd': 'Dólar Americano (US$)',
+        'settings.currency_eur': 'Euro (€)',
+        'settings.currency_gbp': 'Libra Esterlina (£)',
+
+        // Dashboard
+        'dashboard.title': 'Dashboard',
+        'dashboard.refresh_title': 'Atualizar',
+        'dashboard.this_month': 'Este Mês',
+        'dashboard.top_category': 'Maior Categoria',
+        'dashboard.total_expenses': 'Total de Despesas',
+        'dashboard.summary_title': 'Resumo Mensal',
+        'dashboard.table_month': 'Mês',
+        'dashboard.table_expenses': 'Despesas',
+        'dashboard.table_total': 'Total',
+        'dashboard.table_action': 'Ação',
+        'dashboard.view_details': 'Ver detalhes →',
+        'dashboard.no_expenses': 'Nenhuma despesa registrada ainda.',
+        'dashboard.load_error': 'Erro ao carregar dashboard',
+
+        // Nova Despesa
+        'register.title': 'Nova Despesa',
+        'register.category_label': 'Categoria',
+        'register.category_placeholder': 'Ex: Alimentação, Transporte, Moradia...',
+        'register.subcategory_label': 'Subcategoria (opcional)',
+        'register.subcategory_placeholder': 'Ex: Assaí Atacadista, Carnes...',
+        'register.products_label': 'Produtos',
+        'register.add_product': 'Adicionar produto',
+        'register.product_name_placeholder': 'Nome do produto',
+        'register.product_price_placeholder': 'Preço',
+        'register.remove_product_title': 'Remover produto',
+        'register.total_label': 'Total',
+        'register.save_button': 'Salvar Despesa',
+        'register.clear_button': 'Limpar',
+        'register.fill_correctly_warning': 'Verifique os produtos: nome, preço e quantidade são obrigatórios.',
+        'register.add_one_warning': 'Adicione ao menos um produto.',
+        'register.category_required_warning': 'Informe a categoria.',
+        'register.comm_error': 'Erro de comunicação com o backend.',
+
+        // Despesas Mensais
+        'monthly.title': 'Despesas Mensais',
+        'monthly.subtitle': 'Gastos fixos lançados e debitados do saldo automaticamente todo mês.',
+        'monthly.new_button': 'Nova Despesa Mensal',
+        'monthly.empty_title': 'Nenhuma despesa mensal cadastrada.',
+        'monthly.empty_desc': 'Crie templates de gastos fixos (ex.: "Contas da casa", "Assinaturas") para serem lançados e debitados do saldo automaticamente todo mês.',
+        'monthly.items_count': '{count} item(ns)',
+        'monthly.applied_in': 'Aplicado em {month}',
+        'monthly.pending': 'Pendente',
+        'monthly.monthly_total': 'Total mensal',
+        'monthly.edit_button': 'Editar',
+        'monthly.apply_button': 'Aplicar agora',
+        'monthly.apply_title': 'Lançar as despesas deste mês agora e debitar do saldo',
+        'monthly.delete_button': 'Excluir',
+        'monthly.load_error': 'Erro ao carregar despesas mensais.',
+        'monthly.form_new_title': 'Nova Despesa Mensal',
+        'monthly.form_edit_title': 'Editar Despesa Mensal',
+        'monthly.back_to_list': '← Voltar à lista',
+        'monthly.how_it_works_title': 'Como funciona',
+        'monthly.how_it_works_desc': 'Cada item pode ter uma <strong>categoria diferente</strong>. Todo mês, ao abrir o app, todos os itens são lançados como despesas e o total é debitado do seu saldo automaticamente.',
+        'monthly.name_label': 'Nome da despesa mensal',
+        'monthly.name_placeholder': 'Ex: Contas da casa, Assinaturas, Mercado do mês',
+        'monthly.items_label': 'Itens (cada um com sua categoria)',
+        'monthly.add_item': 'Adicionar item',
+        'monthly.remove_item_title': 'Remover item',
+        'monthly.item_category_placeholder': 'Categoria (ex.: Moradia)',
+        'monthly.item_subcategory_placeholder': 'Subcategoria (opcional)',
+        'monthly.item_name_placeholder': 'Nome do produto / conta',
+        'monthly.item_price_placeholder': 'Preço',
+        'monthly.form_total_label': 'Total mensal',
+        'monthly.save_button': 'Salvar Despesa Mensal',
+        'monthly.cancel_button': 'Cancelar',
+        'monthly.invalid_items_warning': 'Verifique os itens: categoria, nome, preço e quantidade são obrigatórios.',
+        'monthly.add_one_item_warning': 'Adicione ao menos um item.',
+        'monthly.save_error': 'Erro ao salvar despesa mensal.',
+        'monthly.delete_error_generic': 'Erro ao excluir.',
+        'monthly.apply_error_generic': 'Erro ao aplicar despesa mensal.',
+        // mensagens vindas do backend (services/monthly.py)
+        'monthly.name_required': 'Informe um nome para a despesa mensal.',
+        'monthly.no_valid_items': 'Nenhum item válido. Cada item precisa de categoria, nome, preço e quantidade.',
+        'monthly.created': "Despesa mensal '{name}' criada com {count} item(ns).",
+        'monthly.create_error': 'Erro ao criar despesa mensal: {error}',
+        'monthly.updated': "Despesa mensal '{name}' atualizada com {count} item(ns).",
+        'monthly.update_error': 'Erro ao atualizar despesa mensal: {error}',
+        'monthly.deleted': 'Despesa mensal excluída.',
+        'monthly.delete_error': 'Erro ao excluir: {error}',
+        'monthly.not_found': 'Despesa mensal não encontrada.',
+        'monthly.apply_error': 'Erro ao lançar despesas: {error}',
+        'monthly.applied': "'{name}' aplicada: {count} despesa(s), {total} debitado(s) do saldo.",
+        'monthly.none_pending': 'Nenhuma despesa mensal pendente.',
+        'monthly.check_applied': 'Despesas mensais lançadas: {groups} grupo(s), {inserted} despesa(s), {total} debitado(s) do saldo.',
+
+        // Árvore de Gastos
+        'tree.title': 'Árvore de Gastos',
+        'tree.breadcrumb_months': 'Meses',
+        'tree.back_to_months': '← Voltar aos meses',
+        'tree.back_to_categories': '← Voltar às categorias',
+        'tree.back': '← Voltar',
+        'tree.no_expenses_recorded': 'Nenhuma despesa registrada.',
+        'tree.load_months_error': 'Erro ao carregar meses.',
+        'tree.no_category_found': 'Nenhuma categoria encontrada.',
+        'tree.load_categories_error': 'Erro ao carregar categorias.',
+        'tree.no_subcategory': 'Sem subcategoria',
+        'tree.no_expense_found': 'Nenhuma despesa encontrada.',
+        'tree.load_expenses_error': 'Erro ao carregar despesas.',
+        'tree.table_date': 'Data',
+        'tree.table_description': 'Descrição',
+        'tree.table_value': 'Valor',
+        'tree.table_actions': 'Ações',
+        'tree.edit_title': 'Editar',
+        'tree.delete_title': 'Excluir',
+        'common.count_items': '{count} item(ns)',
+        'common.count_expenses': '{count} despesa(s)',
+
+        // Calendário
+        'calendar.title': 'Calendário de Salários',
+        'calendar.not_configured': 'Não configurado',
+        'calendar.vacation_net': 'Férias (líquido)',
+        'calendar.monthly_salary': 'Salário mensal',
+        'calendar.next_badge': 'Próximo',
+        'calendar.vacation_badge': 'Férias',
+        'calendar.click_details': 'Clique para detalhes',
+        'calendar.no_reference_msg': 'Configure a próxima data de recebimento do salário para ver o calendário.',
+        'calendar.configure_now': 'Configurar agora',
+        'calendar.load_error': 'Erro ao carregar calendário.',
+
+        // Modal de Férias
+        'ferias.title': 'Calcular Férias',
+        'ferias.description': 'Informe o salário bruto para calcular o valor líquido das férias (inclui 1/3 constitucional, INSS e IRRF).',
+        'ferias.gross_salary_label': 'Salário bruto ({currency})',
+        'ferias.calculate_button': 'Calcular',
+        'ferias.invalid_salary_warning': 'Informe um salário válido.',
+        'ferias.calc_error': 'Erro ao calcular.',
+        'ferias.result_gross': 'Salário bruto:',
+        'ferias.result_third': '1/3 constitucional:',
+        'ferias.result_total_gross': 'Total bruto:',
+        'ferias.result_inss': 'INSS:',
+        'ferias.result_irrf_base': 'Base IRRF:',
+        'ferias.result_irrf_calc': 'IRRF calculado:',
+        'ferias.result_additional_discount': 'Desconto adicional:',
+        'ferias.result_irrf_final': 'IRRF final:',
+        'ferias.result_net': 'LÍQUIDO:',
+
+        // Modal de Editar Despesa
+        'edit_modal.title': 'Editar Despesa',
+        'edit_modal.category': 'Categoria',
+        'edit_modal.subcategory': 'Subcategoria (opcional)',
+        'edit_modal.description': 'Descrição',
+        'edit_modal.date': 'Data',
+        'edit_modal.unit_price': 'Preço unitário ({currency})',
+        'edit_modal.quantity': 'Quantidade',
+        'edit_modal.total_prefix': 'Total:',
+        'edit_modal.save': 'Salvar Alterações',
+        'edit_modal.cancel': 'Cancelar',
+        'edit_modal.fill_correctly_warning': 'Preencha todos os campos corretamente.',
+        'edit_modal.not_found_error': 'Despesa não encontrada.',
+        'edit_modal.load_error': 'Erro ao carregar despesa.',
+        'edit_modal.update_error_generic': 'Erro ao atualizar.',
+
+        // Modal de Excluir
+        'delete_modal.title': 'Confirmar Exclusão',
+        'delete_modal.confirm_text': 'Tem certeza que deseja excluir esta despesa? Esta ação não pode ser desfeita.',
+        'delete_modal.delete': 'Excluir',
+        'delete_modal.cancel': 'Cancelar',
+        'delete_modal.error_generic': 'Erro ao excluir.',
+
+        // Modal de Saldo & Salário
+        'balance_modal.title': 'Meu Saldo & Salário',
+        'balance_modal.current_balance_label': 'Saldo Atual ({currency})',
+        'balance_modal.monthly_salary_label': 'Salário Mensal ({currency})',
+        'balance_modal.salary_placeholder': 'Ex: 3000,00',
+        'balance_modal.auto_credit_hint': 'Crédito automático a cada 30 dias.',
+        'balance_modal.next_date_label': 'Próxima data de recebimento',
+        'balance_modal.next_date_hint': 'Usada para calcular os próximos recebimentos de 30 em 30 dias (os meses seguintes mudam de dia de acordo, já que nem todo mês tem o mesmo tamanho).',
+        'balance_modal.vacation_month_label': 'Mês de Férias',
+        'balance_modal.vacation_hint': 'No calendário, o recebimento que cair nesse mês mostrará o valor líquido das férias.',
+        'balance_modal.save': 'Salvar',
+        'balance_modal.cancel': 'Cancelar',
+        'balance_modal.salary_current_prefix': 'Salário atual: {amount}',
+        'balance_modal.no_salary_configured': 'Nenhum salário configurado',
+        'balance_modal.invalid_values_warning': 'Informe valores válidos.',
+        'balance_modal.save_generic_error': 'Erro ao salvar.',
+        'balance_modal.save_success': 'Saldo, salário e mês de férias atualizados!',
+
+        // mensagens vindas do backend (services/finance.py, scheduler.py, database.py)
+        'expense.add.success': 'Despesa registrada com sucesso!',
+        'expense.add.error': 'Erro ao salvar: {error}',
+        'expense.update.success': 'Despesa atualizada com sucesso!',
+        'expense.update.error': 'Erro ao atualizar: {error}',
+        'expense.delete.success': 'Despesa excluída com sucesso!',
+        'expense.delete.error': 'Erro ao excluir: {error}',
+        'expense.not_found': 'Despesa não encontrada.',
+        'validation.invalid_value': "Valor inválido: '{value}'",
+        'validation.invalid_date': 'Data inválida.',
+        'balance.updated': 'Saldo atualizado.',
+        'balance.update_error': 'Erro ao atualizar saldo: {error}',
+        'expenses.batch.error': 'Erro em massa: {error}',
+        'expenses.bulk.result': '{inserted} despesa(s) inserida(s). {errors_count} erro(s) encontrado(s).',
+        'expenses.structured.result': '{inserted} despesa(s) registrada(s).',
+        'salary.configured': 'Salário configurado.',
+        'salary.configure_error': 'Erro ao configurar salário: {error}',
+        'salary.not_configured': 'Salário não configurado.',
+        'salary.credited': 'Salário de {amount} creditado.',
+        'salary.credit_error': 'Erro ao creditar salário: {error}',
+        'salary.next_date_updated': 'Data de recebimento atualizada.',
+        'salary.next_date_error': 'Erro ao atualizar data: {error}',
+
+        'main.init_error': 'Erro de inicialização do app.',
+
+        'months.1': 'Janeiro', 'months.2': 'Fevereiro', 'months.3': 'Março', 'months.4': 'Abril',
+        'months.5': 'Maio', 'months.6': 'Junho', 'months.7': 'Julho', 'months.8': 'Agosto',
+        'months.9': 'Setembro', 'months.10': 'Outubro', 'months.11': 'Novembro', 'months.12': 'Dezembro',
+    },
+};

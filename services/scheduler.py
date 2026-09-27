@@ -66,7 +66,7 @@ class SchedulerService:
                 "success": True,
                 "balance": new_balance,
                 "salary": row["salary"],
-                "message": f"Salário de R$ {row['salary']:.2f} creditado.",
+                "message": f"Salário de {row['salary']:.2f} creditado.",
                 "key": "salary.credited",
                 "params": {"amount": row["salary"]},
             }

@@ -68,22 +68,32 @@ class Api:
         return {"success": True, "version": APP_VERSION}
 
     def get_theme(self):
-        return self.cfg.get_theme()
+        return {"success": True, "theme": self.cfg.theme}
 
     def set_theme(self, theme: str):
-        return self.cfg.set_theme(theme)
+        self.cfg.theme = theme
+        return {"success": True, "message": "Tema atualizado."}
 
     def get_language(self):
-        return self.cfg.get_language()
+        return {"success": True, "language": self.cfg.language}
 
     def set_language(self, language: str):
-        return self.cfg.set_language(language)
+        self.cfg.language = language
+        return {"success": True, "message": "Idioma atualizado."}
 
     def get_primary_color(self):
-        return self.cfg.get_primary_color()
+        return {"success": True, "color": self.cfg.primary_color}
 
     def set_primary_color(self, color: str):
-        return self.cfg.set_primary_color(color)
+        self.cfg.primary_color = color
+        return {"success": True, "message": "Cor atualizada."}
+
+    def get_currency(self):
+        return {"success": True, "currency": self.cfg.currency}
+
+    def set_currency(self, currency: str):
+        self.cfg.currency = currency
+        return {"success": True, "message": "Moeda atualizada."}
 
     # ------------------------------------------------------------------
     # Saldo (services/finance.py)
@@ -124,14 +134,14 @@ class Api:
 
     @jsonify_result
     def get_salary_calendar(self):
-        vacation_month = self.cfg.get("vacation_month", 7)
-        return self.scheduler.get_salary_calendar(vacation_month)
+        return self.scheduler.get_salary_calendar(self.cfg.vacation_month)
 
     def get_vacation_month(self):
-        return {"success": True, "month": self.cfg.get("vacation_month", 7)}
+        return {"success": True, "month": self.cfg.vacation_month}
 
     def set_vacation_month(self, month: int):
-        return self.cfg.set("vacation_month", int(month))
+        self.cfg.vacation_month = int(month)
+        return {"success": True, "message": "Mês de férias atualizado."}
 
     # ------------------------------------------------------------------
     # Férias / tributos (services/payroll.py)
