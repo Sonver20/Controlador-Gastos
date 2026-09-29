@@ -23,6 +23,7 @@ CG.currency = (function () {
         { code: 'USD', labelKey: 'settings.currency_usd' },
         { code: 'EUR', labelKey: 'settings.currency_eur' },
         { code: 'GBP', labelKey: 'settings.currency_gbp' },
+        { code: 'CNY', labelKey: 'settings.currency_cny' },
     ];
 
     let current = 'BRL';

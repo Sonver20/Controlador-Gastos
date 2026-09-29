@@ -51,6 +51,8 @@ window.CG = window.CG || {};
                 CG.balance.closeModal();
                 CG.calendar.closeFeriasModal();
                 CG.settings.close();
+                CG.tree.closeRenameModal();
+                CG.tree.closeQuickAdd();
             }
         });
     }

@@ -325,16 +325,26 @@
 
                 <!-- Level 4: Individual Expenses -->
                 <div id="tree-expenses" class="hidden space-y-4">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold" id="tree-exp-title"></h3>
-                        <button onclick="CG.tree.goBackFromExpenses()" class="text-sm text-primary-600 hover:underline" data-i18n="tree.back">&larr; Voltar</button>
+                    <div class="flex items-center justify-between gap-3 flex-wrap">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <h3 class="text-lg font-semibold truncate" id="tree-exp-title"></h3>
+                            <button id="tree-exp-rename-btn" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition shrink-0" title="Renomear" data-i18n-title="tree.rename_title">
+                                <i class="ph ph-pencil-simple"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button id="tree-exp-add-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition">
+                                <i class="ph ph-plus"></i> <span data-i18n="tree.add_item">Adicionar item</span>
+                            </button>
+                            <button onclick="CG.tree.goBackFromExpenses()" class="text-sm text-primary-600 hover:underline" data-i18n="tree.back">&larr; Voltar</button>
+                        </div>
                     </div>
                     <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead class="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase text-slate-500 dark:text-slate-400">
                                     <tr>
-                                        <th class="px-6 py-3" data-i18n="tree.table_date">Data</th>
+                                        <th class="px-6 py-3" data-i18n="tree.table_time">Hora</th>
                                         <th class="px-6 py-3" data-i18n="tree.table_description">Descrição</th>
                                         <th class="px-6 py-3 text-right" data-i18n="tree.table_value">Valor</th>
                                         <th class="px-6 py-3 text-center" data-i18n="tree.table_actions">Ações</th>
@@ -390,6 +400,32 @@
                     class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
             </div>
 
+            <!-- Peso variável + peso (kg): o interruptor só decide se o valor multiplica
+                 pela quantidade; o peso é uma anotação opcional, independente de tudo. -->
+            <div>
+                <div class="flex items-center justify-between gap-3">
+                    <label class="flex items-center gap-2.5 shrink-0 cursor-pointer select-none">
+                        <span class="relative inline-block w-11 h-6 shrink-0">
+                            <input type="checkbox" id="edit-variable-price" class="peer sr-only" onchange="CG.modals.toggleEditVariablePrice()">
+                            <span class="absolute inset-0 bg-slate-300 dark:bg-slate-600 rounded-full peer-checked:bg-primary-600 transition-colors pointer-events-none"></span>
+                            <span class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5 pointer-events-none"></span>
+                        </span>
+                        <span class="text-sm font-medium" data-i18n="edit_modal.variable_price_label">Peso variável</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" inputmode="decimal" id="edit-measure" placeholder="Peso ou volume" data-i18n-placeholder="edit_modal.measure_placeholder"
+                            class="w-32 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm">
+                        <select id="edit-measure-unit" class="select-compact px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm cursor-pointer">
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                            <option value="ml">ml</option>
+                            <option value="L">L</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2" data-i18n="edit_modal.variable_price_hint">Ligado, o valor não multiplica pela quantidade — o preço já é o total pago. O peso ou volume é só uma anotação (opcional).</p>
+            </div>
+
             <div>
                 <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.date">Data</label>
                 <div class="relative">
@@ -401,7 +437,7 @@
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.unit_price">Preço unitário (R$)</label>
+                    <label id="edit-price-label" class="block text-sm font-medium mb-2" data-i18n="edit_modal.unit_price">Preço unitário (R$)</label>
                     <input type="text" inputmode="decimal" id="edit-unit-price" oninput="CG.modals.updateEditTotal()"
                         class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
                 </div>
@@ -551,6 +587,106 @@
         </div>
     </div>
 
+    <!-- ==================== RENAME MODAL (categoria / subcategoria) ==================== -->
+    <div id="rename-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md mx-4 p-6 space-y-5 transform transition-all">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold" id="rename-modal-title">Renomear</h3>
+                <button onclick="CG.tree.closeRenameModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1" data-i18n="rename_modal.current_label">Nome atual</p>
+                <p id="rename-current-name" class="text-sm font-medium"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2" data-i18n="rename_modal.new_name_label">Novo nome</label>
+                <input type="text" id="rename-new-name" onkeydown="if(event.key==='Enter') CG.tree.submitRename()"
+                    class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2" data-i18n="rename_modal.hint">Vale para todas as despesas e Despesas Mensais que usam esse nome, em todos os meses.</p>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="CG.tree.submitRename()" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl transition" data-i18n="rename_modal.save">Renomear</button>
+                <button onclick="CG.tree.closeRenameModal()" class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-i18n="edit_modal.cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== QUICK ADD MODAL (item direto na categoria/subcategoria) ==================== -->
+    <div id="quickadd-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-lg mx-4 p-6 space-y-5 transform transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold" data-i18n="quickadd_modal.title">Adicionar item</h3>
+                    <p id="quickadd-context" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5"></p>
+                </div>
+                <button onclick="CG.tree.closeQuickAdd()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.description">Descrição</label>
+                <input type="text" id="quickadd-description"
+                    class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
+            </div>
+
+            <!-- Peso variável + peso (kg): o interruptor só decide se o valor multiplica
+                 pela quantidade; o peso é uma anotação opcional, independente de tudo. -->
+            <div>
+                <div class="flex items-center justify-between gap-3">
+                    <label class="flex items-center gap-2.5 shrink-0 cursor-pointer select-none">
+                        <span class="relative inline-block w-11 h-6 shrink-0">
+                            <input type="checkbox" id="quickadd-variable-price" class="peer sr-only" onchange="CG.tree.toggleQuickAddVariablePrice()">
+                            <span class="absolute inset-0 bg-slate-300 dark:bg-slate-600 rounded-full peer-checked:bg-primary-600 transition-colors pointer-events-none"></span>
+                            <span class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5 pointer-events-none"></span>
+                        </span>
+                        <span class="text-sm font-medium" data-i18n="edit_modal.variable_price_label">Peso variável</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" inputmode="decimal" id="quickadd-measure" placeholder="Peso ou volume" data-i18n-placeholder="edit_modal.measure_placeholder"
+                            class="w-32 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm">
+                        <select id="quickadd-measure-unit" class="select-compact px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm cursor-pointer">
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                            <option value="ml">ml</option>
+                            <option value="L">L</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2" data-i18n="edit_modal.variable_price_hint">Ligado, o valor não multiplica pela quantidade — o preço já é o total pago. O peso ou volume é só uma anotação (opcional).</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label id="quickadd-price-label" class="block text-sm font-medium mb-2" data-i18n="edit_modal.unit_price">Preço unitário (R$)</label>
+                    <input type="text" inputmode="decimal" id="quickadd-price" oninput="CG.tree.updateQuickAddTotal()"
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2" data-i18n="edit_modal.quantity">Quantidade</label>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="CG.tree.stepQuickAddQty(-1)"
+                            class="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
+                        <input type="text" inputmode="decimal" id="quickadd-quantity" oninput="CG.tree.updateQuickAddTotal()"
+                            class="w-full text-center px-2 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition">
+                        <button type="button" onclick="CG.tree.stepQuickAddQty(1)"
+                            class="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">+</button>
+                    </div>
+                </div>
+            </div>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+                <span data-i18n="edit_modal.total_prefix">Total:</span> <span id="quickadd-total-display" class="font-semibold text-primary-600 dark:text-primary-400">R$ 0,00</span>
+            </p>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="CG.tree.submitQuickAdd()" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl transition" data-i18n="quickadd_modal.save">Adicionar</button>
+                <button onclick="CG.tree.closeQuickAdd()" class="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-i18n="edit_modal.cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== SETTINGS MODAL ==================== -->
     <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
         <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-2xl mx-4 flex flex-col sm:flex-row overflow-hidden transform transition-all" style="max-height: 85vh;">
@@ -619,6 +755,7 @@
                             <button type="button" class="currency-btn px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-currency="USD" data-i18n="settings.currency_usd">Dólar Americano (US$)</button>
                             <button type="button" class="currency-btn px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-currency="EUR" data-i18n="settings.currency_eur">Euro (€)</button>
                             <button type="button" class="currency-btn px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-currency="GBP" data-i18n="settings.currency_gbp">Libra Esterlina (£)</button>
+                            <button type="button" class="currency-btn px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-currency="CNY" data-i18n="settings.currency_cny">Yuan Chinês (¥)</button>
                         </div>
                     </div>
                 </div>

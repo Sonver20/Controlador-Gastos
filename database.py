@@ -162,6 +162,9 @@ class Database:
                         amount      DECIMAL NOT NULL,
                         quantity    DECIMAL NOT NULL DEFAULT 1,
                         unit_price  DECIMAL,
+                        is_variable_price INTEGER NOT NULL DEFAULT 0,
+                        measure_value DECIMAL,
+                        measure_unit  TEXT,
                         created_at  TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
                     )
                     """
@@ -236,6 +239,29 @@ class Database:
                     # Para despesas já existentes, o preço unitário "efetivo"
                     # e o proprio valor total (quantidade implicita = 1).
                     conn.execute("UPDATE expenses SET unit_price = amount WHERE unit_price IS NULL")
+                if "is_variable_price" not in expense_columns:
+                    # Item comprado por peso variável (ex.: fruta/carne por
+                    # kg): quantidade é só informativa, não multiplica no
+                    # valor. Despesas já existentes nunca usaram esse modo.
+                    conn.execute("ALTER TABLE expenses ADD COLUMN is_variable_price INTEGER NOT NULL DEFAULT 0")
+                if "measure_value" not in expense_columns:
+                    if "weight_kg" in expense_columns:
+                        # A v3.3.1 guardava só "peso em kg" (weight_kg). Agora
+                        # é peso OU volume, com unidade própria: renomeia a
+                        # coluna (mantendo os valores já gravados).
+                        try:
+                            conn.execute("ALTER TABLE expenses RENAME COLUMN weight_kg TO measure_value")
+                        except sqlite3.OperationalError:
+                            # SQLite < 3.25 não tem RENAME COLUMN: cria e copia.
+                            conn.execute("ALTER TABLE expenses ADD COLUMN measure_value DECIMAL")
+                            conn.execute("UPDATE expenses SET measure_value = weight_kg")
+                    else:
+                        conn.execute("ALTER TABLE expenses ADD COLUMN measure_value DECIMAL")
+                if "measure_unit" not in expense_columns:
+                    # Unidade do peso/volume digitado (kg, g, ml, L). Tudo o
+                    # que já tinha peso antes desta coluna existir era em kg.
+                    conn.execute("ALTER TABLE expenses ADD COLUMN measure_unit TEXT")
+                    conn.execute("UPDATE expenses SET measure_unit = 'kg' WHERE measure_value IS NOT NULL AND measure_unit IS NULL")
                 conn.commit()
 
                 # Grupos mensais: adiciona tabela e colunas faltantes para bancos
@@ -299,6 +325,9 @@ class Database:
                     amount      DECIMAL NOT NULL,
                     quantity    DECIMAL NOT NULL DEFAULT 1,
                     unit_price  DECIMAL,
+                    is_variable_price INTEGER NOT NULL DEFAULT 0,
+                    measure_value DECIMAL,
+                    measure_unit  TEXT,
                     created_at  TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
                 )
                 """
@@ -306,8 +335,8 @@ class Database:
             for r in rows:
                 legacy_amount = to_decimal(r["amount"] if r["amount"] is not None else 0)
                 conn.execute(
-                    "INSERT INTO expenses (id, category, subcategory, description, amount, quantity, unit_price, created_at) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO expenses (id, category, subcategory, description, amount, quantity, unit_price, is_variable_price, measure_value, measure_unit, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         r["id"],
                         r["category"],
@@ -316,6 +345,9 @@ class Database:
                         legacy_amount,
                         Decimal("1"),
                         legacy_amount,
+                        0,
+                        None,
+                        None,
                         r["created_at"],
                     ),
                 )
@@ -370,16 +402,28 @@ class Database:
         amount: Decimal,
         quantity: Decimal,
         unit_price: Decimal,
+        is_variable_price: bool = False,
+        measure_value: Optional[Decimal] = None,
+        measure_unit: Optional[str] = None,
     ) -> Dict[str, Any]:
         """INSERT bruto de uma despesa. Os valores devem chegar já prontos
         (Decimal, categoria/descrição já normalizadas) -- quem decide como
-        calcular `amount` a partir de preco x quantidade e o FinanceService."""
+        calcular `amount` a partir de preco x quantidade e o FinanceService.
+        `is_variable_price`: item comprado por peso variável (ex.: fruta ou
+        carne por kg) -- nesse caso `unit_price` (o valor recebido aqui já
+        pronto) é o TOTAL pago, e NÃO foi multiplicado por `quantity` para
+        chegar em `amount`. `quantity` continua sendo a contagem de itens
+        normalmente (ex.: "4" laranjas), completamente independente de
+        `measure_value`/`measure_unit` -- o peso ou volume (kg, g, ml, L)
+        é sempre opcional e puramente informativo, em qualquer modo, nunca
+        usado em nenhum cálculo."""
         try:
             with self._connection() as conn:
                 cursor = conn.execute(
-                    "INSERT INTO expenses (category, subcategory, description, amount, quantity, unit_price) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
-                    (category, subcategory, description, amount, quantity, unit_price),
+                    "INSERT INTO expenses (category, subcategory, description, amount, quantity, unit_price, is_variable_price, measure_value, measure_unit) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (category, subcategory, description, amount, quantity, unit_price, int(bool(is_variable_price)),
+                     measure_value, measure_unit),
                 )
                 conn.commit()
                 last_id = cursor.lastrowid
@@ -391,7 +435,8 @@ class Database:
         """
         INSERT de várias despesas na MESMA transação (atômico: tudo ou
         nada). Cada item de `rows` e um dict com category/subcategory/
-        description/amount/quantity/unit_price já prontos.
+        description/amount/quantity/unit_price já prontos, e opcionalmente
+        `is_variable_price`, `measure_value` e `measure_unit` (default False/None se ausentes).
         """
         if not rows:
             return {"success": True, "ids": []}
@@ -400,9 +445,10 @@ class Database:
             with self._connection() as conn:
                 for r in rows:
                     cursor = conn.execute(
-                        "INSERT INTO expenses (category, subcategory, description, amount, quantity, unit_price) "
-                        "VALUES (?, ?, ?, ?, ?, ?)",
-                        (r["category"], r.get("subcategory"), r["description"], r["amount"], r["quantity"], r["unit_price"]),
+                        "INSERT INTO expenses (category, subcategory, description, amount, quantity, unit_price, is_variable_price, measure_value, measure_unit) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (r["category"], r.get("subcategory"), r["description"], r["amount"], r["quantity"], r["unit_price"],
+                         int(bool(r.get("is_variable_price", False))), r.get("measure_value"), r.get("measure_unit")),
                     )
                     ids.append(cursor.lastrowid)
                 conn.commit()
@@ -430,6 +476,9 @@ class Database:
         quantity: Decimal,
         unit_price: Decimal,
         created_at: Optional[str] = None,
+        is_variable_price: bool = False,
+        measure_value: Optional[Decimal] = None,
+        measure_unit: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         UPDATE bruto de uma despesa. `created_at`, se informado (formato
@@ -441,14 +490,16 @@ class Database:
                 if created_at is not None:
                     cursor = conn.execute(
                         "UPDATE expenses SET category = ?, subcategory = ?, description = ?, amount = ?, "
-                        "quantity = ?, unit_price = ?, created_at = ? WHERE id = ?",
-                        (category, subcategory, description, amount, quantity, unit_price, created_at, expense_id),
+                        "quantity = ?, unit_price = ?, is_variable_price = ?, measure_value = ?, measure_unit = ?, created_at = ? WHERE id = ?",
+                        (category, subcategory, description, amount, quantity, unit_price,
+                         int(bool(is_variable_price)), measure_value, measure_unit, created_at, expense_id),
                     )
                 else:
                     cursor = conn.execute(
                         "UPDATE expenses SET category = ?, subcategory = ?, description = ?, amount = ?, "
-                        "quantity = ?, unit_price = ? WHERE id = ?",
-                        (category, subcategory, description, amount, quantity, unit_price, expense_id),
+                        "quantity = ?, unit_price = ?, is_variable_price = ?, measure_value = ?, measure_unit = ? WHERE id = ?",
+                        (category, subcategory, description, amount, quantity, unit_price,
+                         int(bool(is_variable_price)), measure_value, measure_unit, expense_id),
                     )
                 conn.commit()
                 rowcount = cursor.rowcount
@@ -555,7 +606,7 @@ class Database:
         """
         try:
             sql = (
-                "SELECT id, category, subcategory, description, amount, quantity, unit_price, created_at "
+                "SELECT id, category, subcategory, description, amount, quantity, unit_price, is_variable_price, measure_value, measure_unit, created_at "
                 "FROM expenses WHERE strftime('%Y-%m', created_at) = ? AND category = ?"
             )
             params: List[Any] = [month, category]
@@ -591,6 +642,60 @@ class Database:
             return {"success": True, "data": [r["subcategory"] for r in rows]}
         except sqlite3.Error as e:
             return {"success": False, "data": [], "message": str(e)}
+
+    def rename_category(self, old_category: str, new_category: str) -> Dict[str, Any]:
+        """
+        Renomeia uma categoria em TODAS as despesas já lançadas e nos
+        templates de Despesa Mensal que a usam. É um rename GLOBAL (não
+        fica preso ao mês que estava sendo visto na Árvore de Gastos):
+        categoria é só uma etiqueta de texto reaproveitada entre meses, não
+        uma entidade por mês, então corrigir o nome deve valer pra sempre
+        que ela aparece.
+        """
+        try:
+            with self._connection() as conn:
+                conn.execute("UPDATE expenses SET category = ? WHERE category = ?", (new_category, old_category))
+                conn.execute("UPDATE monthly_items SET category = ? WHERE category = ?", (new_category, old_category))
+                conn.commit()
+            return {"success": True, "message": "Categoria renomeada.", "key": "tree.category_renamed"}
+        except sqlite3.Error as e:
+            return {"success": False, "message": f"Erro ao renomear categoria: {e}", "key": "tree.rename_error", "params": {"error": str(e)}}
+
+    def rename_subcategory(self, category: str, old_subcategory: Optional[str], new_subcategory: Optional[str]) -> Dict[str, Any]:
+        """
+        Renomeia uma subcategoria, escopada pela categoria (a mesma
+        subcategoria "X" só é renomeada dentro de `category`, já que
+        subcategorias não têm significado fora da categoria a que
+        pertencem). Também global entre meses, pelo mesmo motivo de
+        `rename_category`. `old_subcategory`/`new_subcategory` vazios ou
+        None representam o balde "sem subcategoria" -- permite tanto
+        nomear itens sem subcategoria quanto "esvaziar" uma subcategoria.
+        """
+        try:
+            new_value = (new_subcategory or "").strip() or None
+            with self._connection() as conn:
+                if not old_subcategory:
+                    conn.execute(
+                        "UPDATE expenses SET subcategory = ? WHERE category = ? AND (subcategory IS NULL OR subcategory = '')",
+                        (new_value, category),
+                    )
+                    conn.execute(
+                        "UPDATE monthly_items SET subcategory = ? WHERE category = ? AND (subcategory IS NULL OR subcategory = '')",
+                        (new_value, category),
+                    )
+                else:
+                    conn.execute(
+                        "UPDATE expenses SET subcategory = ? WHERE category = ? AND subcategory = ?",
+                        (new_value, category, old_subcategory),
+                    )
+                    conn.execute(
+                        "UPDATE monthly_items SET subcategory = ? WHERE category = ? AND subcategory = ?",
+                        (new_value, category, old_subcategory),
+                    )
+                conn.commit()
+            return {"success": True, "message": "Subcategoria renomeada.", "key": "tree.subcategory_renamed"}
+        except sqlite3.Error as e:
+            return {"success": False, "message": f"Erro ao renomear subcategoria: {e}", "key": "tree.rename_error", "params": {"error": str(e)}}
 
     # ------------------------------------------------------------------
     # Despesas Mensais: CRUD de grupos e itens (templates recorrentes)

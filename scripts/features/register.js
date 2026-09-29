@@ -58,26 +58,50 @@ CG.register = (function () {
         const list = document.getElementById('reg-products-list');
         const rowId = `prow-${++productRowCounter}`;
         const row = document.createElement('div');
-        row.className = 'product-row flex flex-col sm:flex-row gap-3 items-stretch sm:items-center bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700';
+        row.className = 'product-row bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700 space-y-2';
         row.dataset.rowId = rowId;
+        const inputCls = 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 outline-none transition';
+        const unitOptions = ['kg', 'g', 'ml', 'L'].map(u => `<option value="${u}">${u}</option>`).join('');
         row.innerHTML = `
-            <input type="text" class="product-name flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
-                placeholder="${CG.i18n.t('register.product_name_placeholder')}" oninput="CG.register.updateProductsGrandTotal()">
-            <input type="text" inputmode="decimal" class="product-price w-full sm:w-28 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
-                placeholder="${CG.i18n.t('register.product_price_placeholder')}" oninput="CG.register.updateProductsGrandTotal()">
-            <div class="flex items-center gap-2 justify-center">
-                <button type="button" onclick="CG.register.stepProductQty('${rowId}', -1)"
-                    class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
-                <input type="text" inputmode="decimal" class="product-qty w-16 text-center px-2 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
-                    value="1" oninput="CG.register.updateProductsGrandTotal()">
-                <button type="button" onclick="CG.register.stepProductQty('${rowId}', 1)"
-                    class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">+</button>
+            <!-- Linha principal: a mesma de sempre (nome, preço, quantidade, subtotal, remover) -->
+            <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                <input type="text" class="product-name flex-1 px-3 py-2 rounded-lg ${inputCls} text-sm"
+                    placeholder="${CG.i18n.t('register.product_name_placeholder')}" oninput="CG.register.updateProductsGrandTotal()">
+                <input type="text" inputmode="decimal" class="product-price w-full sm:w-28 px-3 py-2 rounded-lg ${inputCls} text-sm"
+                    placeholder="${CG.i18n.t('register.product_price_placeholder')}" oninput="CG.register.updateProductsGrandTotal()">
+                <div class="flex items-center gap-2 justify-center">
+                    <button type="button" onclick="CG.register.stepProductQty('${rowId}', -1)"
+                        class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
+                    <input type="text" inputmode="decimal" class="product-qty w-16 text-center px-2 py-2 rounded-lg ${inputCls} text-sm"
+                        value="1" oninput="CG.register.updateProductsGrandTotal()">
+                    <button type="button" onclick="CG.register.stepProductQty('${rowId}', 1)"
+                        class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">+</button>
+                </div>
+                <span class="product-subtotal text-sm font-semibold text-slate-600 dark:text-slate-300 w-24 text-right shrink-0">${formatCurrency(0)}</span>
+                <button type="button" onclick="CG.register.removeProductRow('${rowId}')"
+                    class="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 shrink-0" title="${CG.i18n.t('register.remove_product_title')}">
+                    <i class="ph ph-trash text-lg"></i>
+                </button>
             </div>
-            <span class="product-subtotal text-sm font-semibold text-slate-600 dark:text-slate-300 w-24 text-right shrink-0">${formatCurrency(0)}</span>
-            <button type="button" onclick="CG.register.removeProductRow('${rowId}')"
-                class="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 shrink-0" title="${CG.i18n.t('register.remove_product_title')}">
-                <i class="ph ph-trash text-lg"></i>
-            </button>
+
+            <!-- Linha fina, logo abaixo do nome: [toggle Peso variável] [peso ou volume] [unidade].
+                 O interruptor só decide se o valor multiplica pela quantidade; o número e a
+                 unidade (kg, g, ml, L) são uma anotação opcional que nunca entra na conta. -->
+            <div class="flex items-center gap-3 flex-wrap">
+                <label class="flex items-center gap-2 shrink-0 cursor-pointer select-none" title="${CG.i18n.t('register.variable_price_hint')}">
+                    <span class="relative inline-block w-8 h-[18px] shrink-0">
+                        <input type="checkbox" class="product-variable-toggle peer sr-only" onchange="CG.register.toggleVariablePrice('${rowId}')">
+                        <span class="absolute inset-0 bg-slate-300 dark:bg-slate-600 rounded-full peer-checked:bg-primary-600 transition-colors pointer-events-none"></span>
+                        <span class="absolute left-0.5 top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-3.5 pointer-events-none"></span>
+                    </span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap" data-i18n="register.variable_price_label">Peso variável</span>
+                </label>
+                <div class="flex items-center gap-1.5">
+                    <input type="text" inputmode="decimal" class="product-measure w-24 px-2.5 py-1 rounded-lg ${inputCls} text-xs"
+                        placeholder="${CG.i18n.t('register.measure_placeholder')}">
+                    <select class="product-measure-unit select-compact px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 outline-none transition text-xs cursor-pointer" title="${CG.i18n.t('register.measure_unit_title')}">${unitOptions}</select>
+                </div>
+            </div>
         `;
         list.appendChild(row);
         row.querySelector('.product-name').focus();
@@ -104,13 +128,36 @@ CG.register = (function () {
         updateProductsGrandTotal();
     }
 
+    /**
+     * Interruptor "Peso variável" de uma linha. É a ÚNICA coisa que ele
+     * controla: se o valor multiplica pela quantidade. Desligado, tudo
+     * funciona normalmente (preço unitário x quantidade). Ligado, o valor
+     * digitado já é o TOTAL pago e a quantidade (nº de itens) deixa de
+     * multiplicar -- mas continua no lugar, com o stepper de sempre, para
+     * registrar quantos itens foram (ex.: 4 laranjas). O peso (kg) é um
+     * campo à parte, sempre disponível, e nunca entra na conta.
+     * Único ajuste visual: o placeholder do preço passa a dizer que ali vai
+     * o total, para não haver dúvida sobre o que está sendo digitado.
+     */
+    function toggleVariablePrice(rowId) {
+        const row = document.getElementById('reg-products-list').querySelector(`[data-row-id="${rowId}"]`);
+        if (!row) return;
+        const checked = row.querySelector('.product-variable-toggle').checked;
+        row.querySelector('.product-price').placeholder = checked
+            ? CG.i18n.t('register.total_paid_placeholder')
+            : CG.i18n.t('register.product_price_placeholder');
+        updateProductsGrandTotal();
+    }
+
     function updateProductsGrandTotal() {
         const rows = document.querySelectorAll('#reg-products-list .product-row');
         let grandTotal = 0;
         rows.forEach(row => {
             const price = CG.utils.parseLocaleNumber(row.querySelector('.product-price').value);
+            const isVariable = row.querySelector('.product-variable-toggle').checked;
             const qty = CG.utils.parseLocaleNumber(row.querySelector('.product-qty').value);
-            const subtotal = price * qty;
+            // Peso variável: o preço digitado JÁ é o total -- não multiplica.
+            const subtotal = isVariable ? price : price * qty;
             row.querySelector('.product-subtotal').textContent = formatCurrency(subtotal);
             grandTotal += subtotal;
         });
@@ -137,6 +184,9 @@ CG.register = (function () {
             const name = row.querySelector('.product-name').value.trim();
             const priceStr = row.querySelector('.product-price').value.trim().replace(',', '.');
             const qtyStr = row.querySelector('.product-qty').value.trim().replace(',', '.');
+            const measureStr = row.querySelector('.product-measure').value.trim().replace(',', '.');
+            const measureUnit = row.querySelector('.product-measure-unit').value;
+            const isVariable = row.querySelector('.product-variable-toggle').checked;
 
             // Linha totalmente vazia (usuário clicou em "+" e não usou) -- ignora
             if (!name && !priceStr) return;
@@ -147,7 +197,16 @@ CG.register = (function () {
                 hasInvalidRow = true;
                 return;
             }
-            products.push({ description: name, unit_price: priceStr, quantity: qtyStr });
+            // Peso/volume é opcional; se preenchido, precisa ser um número positivo.
+            if (measureStr && (isNaN(parseFloat(measureStr)) || parseFloat(measureStr) <= 0)) {
+                hasInvalidRow = true;
+                return;
+            }
+            products.push({
+                description: name, unit_price: priceStr, quantity: qtyStr,
+                is_variable_price: isVariable,
+                measure_value: measureStr || null, measure_unit: measureStr ? measureUnit : null,
+            });
         });
 
         if (hasInvalidRow) {
@@ -197,6 +256,7 @@ CG.register = (function () {
         addProductRow,
         removeProductRow,
         stepProductQty,
+        toggleVariablePrice,
         updateProductsGrandTotal,
         submitProductsExpense,
         clearRegisterForm,

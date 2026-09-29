@@ -276,3 +276,14 @@ textarea {
         padding-bottom: 80px;
     }
 }
+
+/* --------------------------------------------------------------------------
+   Select compacto (ex.: unidade kg/g/ml/L ao lado do peso/volume) - reduz o
+   espaço reservado para a seta do select padrão, que é dimensionado para
+   campos de formulário largos.
+   -------------------------------------------------------------------------- */
+select.select-compact {
+    padding-right: 1.6rem;
+    background-position: right 0.45rem center;
+    background-size: 1em;
+}

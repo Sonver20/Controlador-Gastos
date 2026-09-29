@@ -46,12 +46,9 @@ class Config:
 
     # Tema ("light"/"dark"), idioma ("pt"/"en") e cor principal (id de
     # paleta ou hex) -- ver scripts/core/theme.js, i18n.js e color.js.
-
     theme = ConfigProperty("theme", "light")
     language = ConfigProperty("language", "pt")
-
     primary_color = ConfigProperty("primary_color", "violet")
-
     # Codigo ISO 4217 da moeda de EXIBICAO (ex.: "BRL", "USD", "EUR",
     # "GBP") -- ver CURRENCIES em app.py para a lista suportada nesta
     # primeira versao (moedas comuns de 2 casas decimais; moedas que
@@ -59,12 +56,9 @@ class Config:
     # formatacao: o numero digitado pelo usuario nao muda, so o simbolo
     # exibido (Intl.NumberFormat, no frontend, ja sabe renderizar o
     # simbolo certo por locale a partir do codigo).
-
     currency = ConfigProperty("currency", "BRL")
-
     # Mes (1-12) usado pelo calendario de salarios para destacar o
     # recebimento de ferias -- ver services/scheduler.py.
-    
     vacation_month = ConfigProperty("vacation_month", 7)
 
     def __init__(self, config_path: str = "app_config.json"):

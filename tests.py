@@ -26,7 +26,7 @@ import sys
 import sqlite3
 import tempfile
 from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 # Garante que os modulos do projeto sejam importaveis
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -332,7 +332,7 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
         self.assertEqual(amt, Decimal("13.50"))
 
     def test_resolve_amount_quantity_mode_zero_quantity_raises(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(InvalidOperation):
             resolve_amount(None, "0", "10.00")
 
     # ------------------------------------------------------------------
@@ -504,6 +504,335 @@ class TestSubcategoryAndQuantity(unittest.TestCase):
         self.assertEqual(res["total"], Decimal("0"))
 
 
+class TestVariablePriceExpense(unittest.TestCase):
+    """
+    Testa o modo "Peso variável" e o campo de peso (anotacoes.txt).
+
+    Regras (as duas coisas são INDEPENDENTES):
+    - `is_variable_price` só decide se o valor multiplica pela quantidade:
+      desligado, a despesa funciona normalmente (preço x quantidade);
+      ligado, o valor digitado já é o TOTAL pago e a quantidade (nº de
+      itens) NÃO multiplica, mas continua sendo registrada.
+    - `measure_value`/`measure_unit` (peso ou volume: kg, g, ml, L) são
+      sempre opcionais e puramente informativos, em qualquer modo -- nunca
+      entram em nenhuma conta.
+    """
+
+    def setUp(self):
+        self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
+
+    def test_resolve_amount_variable_price_does_not_multiply(self):
+        # 4 laranjas por R$2,95 no total -- NÃO é 2.95 * 4 = 11.80
+        qty, price, amt = resolve_amount(None, "4", "2.95", is_variable_price=True)
+        self.assertEqual(amt, Decimal("2.95"))
+        self.assertEqual(qty, Decimal("4.000"))
+        # preço "por item" é só informativo, derivado de total / quantidade
+        self.assertEqual(price, Decimal("0.74"))  # 2.95 / 4 = 0.7375 -> 0.74
+
+    def test_resolve_amount_normal_mode_still_multiplies(self):
+        qty, price, amt = resolve_amount(None, "3", "25.00", is_variable_price=False)
+        self.assertEqual(amt, Decimal("75.00"))
+
+    def test_resolve_amount_variable_price_requires_total(self):
+        with self.assertRaises(InvalidOperation):
+            resolve_amount(None, "4", None, is_variable_price=True)
+
+    def test_resolve_amount_variable_price_without_quantity_defaults_to_one(self):
+        qty, price, amt = resolve_amount(None, None, "2.95", is_variable_price=True)
+        self.assertEqual(qty, Decimal("1"))
+        self.assertEqual(amt, Decimal("2.95"))
+        self.assertEqual(price, Decimal("2.95"))
+
+    def test_variable_price_keeps_item_count_and_weight_separate(self):
+        # O exemplo do usuário: 4 laranjas, 740g no total, R$2,95 no total.
+        res = self.finance.add_expense(
+            "Feira", "Laranja", subcategory="Frutas",
+            quantity="4", unit_price="2.95", is_variable_price=True, measure_value="0.740",
+        )
+        self.assertTrue(res["success"])
+        self.assertEqual(res["amount"], Decimal("2.95"))  # não multiplicou por 4
+        fetched = self.db.get_expense(res["id"])["data"]
+        self.assertEqual(fetched["amount"], Decimal("2.95"))
+        self.assertEqual(fetched["quantity"], Decimal("4.000"))  # contagem preservada
+        self.assertEqual(fetched["measure_value"], Decimal("0.740"))
+        self.assertEqual(fetched["measure_unit"], "kg")  # sem unidade informada -> kg
+        self.assertEqual(fetched["is_variable_price"], 1)
+
+    def test_normal_mode_with_weight_annotation_still_multiplies(self):
+        # "Três pacotes de arroz de 5kg": modo normal, peso é só anotação.
+        res = self.finance.add_expense(
+            "Mercado", "Arroz", quantity="3", unit_price="25.00", measure_value="5",
+        )
+        self.assertEqual(res["amount"], Decimal("75.00"))
+        fetched = self.db.get_expense(res["id"])["data"]
+        self.assertEqual(fetched["quantity"], Decimal("3.000"))
+        self.assertEqual(fetched["measure_value"], Decimal("5.000"))
+        self.assertEqual(fetched["is_variable_price"], 0)
+
+    def test_weight_is_optional_and_defaults_to_none(self):
+        res = self.finance.add_expense("Cat", "Item", "10.00")
+        fetched = self.db.get_expense(res["id"])["data"]
+        self.assertIsNone(fetched["measure_value"])
+        self.assertEqual(fetched["is_variable_price"], 0)
+
+    def test_blank_weight_is_stored_as_none(self):
+        res = self.finance.add_expense("Cat", "Item", quantity="2", unit_price="5", measure_value="  ")
+        self.assertIsNone(self.db.get_expense(res["id"])["data"]["measure_value"])
+
+    def test_weight_accepts_comma_decimal(self):
+        res = self.finance.add_expense("Cat", "Item", quantity="1", unit_price="5", measure_value="1,5")
+        self.assertEqual(self.db.get_expense(res["id"])["data"]["measure_value"], Decimal("1.500"))
+
+    def test_update_expense_can_change_weight_and_mode(self):
+        add = self.finance.add_expense("Feira", "Laranja", quantity="4", unit_price="1.00")  # normal: 4.00
+        self.assertEqual(add["amount"], Decimal("4.00"))
+        res = self.finance.update_expense(
+            add["id"], "Feira", "Laranja", quantity="4", unit_price="2.95",
+            is_variable_price=True, measure_value="0.740",
+        )
+        self.assertTrue(res["success"])
+        self.assertEqual(res["amount"], Decimal("2.95"))
+        fetched = self.db.get_expense(add["id"])["data"]
+        self.assertEqual(fetched["is_variable_price"], 1)
+        self.assertEqual(fetched["quantity"], Decimal("4.000"))
+        self.assertEqual(fetched["measure_value"], Decimal("0.740"))
+
+    def test_update_expense_can_clear_weight(self):
+        add = self.finance.add_expense("Cat", "Item", quantity="1", unit_price="5", measure_value="2")
+        self.finance.update_expense(add["id"], "Cat", "Item", quantity="1", unit_price="5", measure_value="")
+        self.assertIsNone(self.db.get_expense(add["id"])["data"]["measure_value"])
+
+    def test_update_adjusts_balance_by_difference_when_switching_mode(self):
+        self.finance.set_balance("100.00")
+        add = self.finance.add_expense("Feira", "Laranja", quantity="4", unit_price="1.00")  # -4.00
+        self.finance.update_expense(add["id"], "Feira", "Laranja", quantity="4", unit_price="2.95",
+                                    is_variable_price=True)  # agora 2.95 -> devolve 1.05
+        self.assertEqual(self.finance.get_balance()["balance"], Decimal("97.05"))
+
+    def test_add_expenses_structured_mixes_modes_and_weights(self):
+        products = [
+            {"description": "Leite", "unit_price": "4.50", "quantity": "2"},  # normal: 9.00
+            {"description": "Laranja", "unit_price": "2.95", "quantity": "4",
+             "is_variable_price": True, "measure_value": "0.740"},  # 2.95 exato, 4 itens, 0,740 kg
+            {"description": "Arroz", "unit_price": "25.00", "quantity": "3", "measure_value": "5"},  # normal: 75.00
+        ]
+        res = self.finance.add_expenses_structured("Feira", None, products)
+        self.assertTrue(res["success"])
+        self.assertEqual(res["inserted"], 3)
+        self.assertEqual(res["total"], Decimal("86.95"))
+
+        from datetime import datetime
+        month = datetime.now().strftime("%Y-%m")
+        exps = self.db.get_expenses_by_month_and_category(month, "Feira")
+        by_name = {e["description"]: e for e in exps["data"]}
+        self.assertEqual(by_name["Leite"]["amount"], Decimal("9.00"))
+        self.assertIsNone(by_name["Leite"]["measure_value"])
+        self.assertEqual(by_name["Laranja"]["amount"], Decimal("2.95"))
+        self.assertEqual(by_name["Laranja"]["quantity"], Decimal("4.000"))
+        self.assertEqual(by_name["Laranja"]["measure_value"], Decimal("0.740"))
+        self.assertEqual(by_name["Laranja"]["is_variable_price"], 1)
+        self.assertEqual(by_name["Arroz"]["amount"], Decimal("75.00"))
+        self.assertEqual(by_name["Arroz"]["measure_value"], Decimal("5.000"))
+        self.assertEqual(by_name["Arroz"]["is_variable_price"], 0)
+
+
+class TestMeasureUnits(unittest.TestCase):
+    """Peso/volume opcional com unidade (kg, g, ml, L): só anotação, sem conversão."""
+
+    def setUp(self):
+        self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
+
+    def _add(self, value, unit):
+        res = self.finance.add_expense("Cat", "Item", quantity="1", unit_price="10.00",
+                                       measure_value=value, measure_unit=unit)
+        return res, (self.db.get_expense(res["id"])["data"] if res["success"] else None)
+
+    def test_each_unit_is_stored_as_typed_without_conversion(self):
+        for value, unit in [("740", "g"), ("1.5", "L"), ("500", "ml"), ("0.750", "kg")]:
+            res, row = self._add(value, unit)
+            self.assertTrue(res["success"], unit)
+            self.assertEqual(row["measure_unit"], unit)
+            self.assertEqual(row["measure_value"], Decimal(value).quantize(Decimal("0.001")))
+            self.assertEqual(row["amount"], Decimal("10.00"))  # unidade nunca mexe no valor
+
+    def test_unit_is_case_insensitive_and_canonicalized(self):
+        _, row = self._add("2", "l")
+        self.assertEqual(row["measure_unit"], "L")
+        _, row = self._add("2", "KG")
+        self.assertEqual(row["measure_unit"], "kg")
+        _, row = self._add("2", "ML")
+        self.assertEqual(row["measure_unit"], "ml")
+
+    def test_missing_unit_defaults_to_kg(self):
+        _, row = self._add("2", None)
+        self.assertEqual(row["measure_unit"], "kg")
+        _, row = self._add("2", "")
+        self.assertEqual(row["measure_unit"], "kg")
+
+    def test_invalid_unit_is_rejected(self):
+        res, _ = self._add("2", "libras")
+        self.assertFalse(res["success"])
+
+    def test_non_positive_value_is_rejected(self):
+        res, _ = self._add("0", "kg")
+        self.assertFalse(res["success"])
+        res, _ = self._add("-1", "g")
+        self.assertFalse(res["success"])
+
+    def test_unit_without_value_is_discarded(self):
+        _, row = self._add("", "L")
+        self.assertIsNone(row["measure_value"])
+        self.assertIsNone(row["measure_unit"])
+
+    def test_update_can_change_unit(self):
+        res, _ = self._add("0.740", "kg")
+        self.finance.update_expense(res["id"], "Cat", "Item", quantity="1", unit_price="10.00",
+                                    measure_value="740", measure_unit="g")
+        row = self.db.get_expense(res["id"])["data"]
+        self.assertEqual((row["measure_value"], row["measure_unit"]), (Decimal("740.000"), "g"))
+
+    def test_update_can_clear_measure_and_unit_together(self):
+        res, _ = self._add("2", "L")
+        self.finance.update_expense(res["id"], "Cat", "Item", quantity="1", unit_price="10.00", measure_value="")
+        row = self.db.get_expense(res["id"])["data"]
+        self.assertIsNone(row["measure_value"])
+        self.assertIsNone(row["measure_unit"])
+
+    def test_structured_products_carry_their_own_unit(self):
+        products = [
+            {"description": "Suco", "unit_price": "8.00", "quantity": "1", "measure_value": "1.5", "measure_unit": "L"},
+            {"description": "Queijo", "unit_price": "9.00", "quantity": "1", "measure_value": "300", "measure_unit": "g"},
+            {"description": "Pão", "unit_price": "5.00", "quantity": "1"},
+        ]
+        res = self.finance.add_expenses_structured("Feira", None, products)
+        self.assertEqual(res["inserted"], 3)
+        from datetime import datetime
+        exps = self.db.get_expenses_by_month_and_category(datetime.now().strftime("%Y-%m"), "Feira")["data"]
+        by_name = {e["description"]: e for e in exps}
+        self.assertEqual(by_name["Suco"]["measure_unit"], "L")
+        self.assertEqual(by_name["Queijo"]["measure_unit"], "g")
+        self.assertIsNone(by_name["Pão"]["measure_unit"])
+
+
+class TestMeasureMigrationFromWeightKg(unittest.TestCase):
+    """Bancos da v3.3.1 tinham `weight_kg`; viram `measure_value` + unidade "kg"."""
+
+    def setUp(self):
+        import tempfile, os
+        self.dir = tempfile.mkdtemp()
+        self.path = os.path.join(self.dir, "v331.db")
+        import sqlite3
+        conn = sqlite3.connect(self.path)
+        conn.execute("""CREATE TABLE expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT NOT NULL, subcategory TEXT,
+            description TEXT NOT NULL, amount DECIMAL NOT NULL, quantity DECIMAL NOT NULL DEFAULT 1,
+            unit_price DECIMAL, is_variable_price INTEGER NOT NULL DEFAULT 0, weight_kg DECIMAL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')))""")
+        conn.execute("INSERT INTO expenses (category, description, amount, quantity, unit_price, weight_kg, created_at) "
+                     "VALUES ('Mercado','Picanha',60.00,1,60.00,0.750,'2026-09-10 12:00:00')")
+        conn.execute("INSERT INTO expenses (category, description, amount, quantity, unit_price, created_at) "
+                     "VALUES ('Mercado','Pão',5.00,1,5.00,'2026-09-11 08:00:00')")
+        conn.commit(); conn.close()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def test_weight_kg_becomes_measure_value_in_kg(self):
+        db = Database(db_path=self.path)
+        with_weight = db.get_expense(1)["data"]
+        without = db.get_expense(2)["data"]
+        self.assertEqual(with_weight["measure_value"], Decimal("0.750"))
+        self.assertEqual(with_weight["measure_unit"], "kg")
+        self.assertIsNone(without["measure_value"])
+        self.assertIsNone(without["measure_unit"])
+        self.assertNotIn("weight_kg", with_weight)
+
+    def test_migrated_expense_can_be_edited_with_another_unit(self):
+        db = Database(db_path=self.path)
+        FinanceService(db).update_expense(1, "Mercado", "Picanha", quantity="1", unit_price="60.00",
+                                          measure_value="750", measure_unit="g")
+        row = db.get_expense(1)["data"]
+        self.assertEqual((row["measure_value"], row["measure_unit"]), (Decimal("750.000"), "g"))
+
+    def test_migration_is_idempotent(self):
+        Database(db_path=self.path)
+        db = Database(db_path=self.path)  # abrir de novo não pode quebrar nem duplicar
+        self.assertEqual(db.get_expense(1)["data"]["measure_unit"], "kg")
+
+
+class TestCategoryRename(unittest.TestCase):
+    """
+    Testa renomear categorias e subcategorias (anotacoes.txt): deve valer
+    para TODAS as despesas já lançadas (não só o mês sendo visto) e também
+    para os templates de Despesa Mensal, já que é a mesma etiqueta de
+    texto reaproveitada -- não uma entidade por mês.
+    """
+
+    def setUp(self):
+        self.db = Database(db_path=":memory:")
+        self.finance = FinanceService(self.db)
+
+    def test_rename_category_updates_all_expenses(self):
+        self.finance.add_expense("Mercado", "Item 1", "10.00")
+        self.finance.add_expense("Mercado", "Item 2", "20.00")
+        self.finance.add_expense("Farmacia", "Remedio", "15.00")
+
+        res = self.finance.rename_category("Mercado", "Supermercado")
+        self.assertTrue(res["success"])
+
+        self.assertEqual(self.db.get_all_categories()["data"], ["Farmacia", "Supermercado"])
+
+    def test_rename_category_updates_monthly_items_too(self):
+        self.db.insert_monthly_group("Contas", [
+            {"category": "Mercado", "subcategory": None, "description": "Feira do mes",
+             "quantity": Decimal("1"), "unit_price": Decimal("300.00")},
+        ])
+        self.finance.rename_category("Mercado", "Supermercado")
+        groups = self.db.get_monthly_groups()
+        self.assertEqual(groups[0]["items"][0]["category"], "Supermercado")
+
+    def test_rename_category_empty_new_name_rejected(self):
+        self.finance.add_expense("Mercado", "Item", "10.00")
+        res = self.finance.rename_category("Mercado", "   ")
+        self.assertFalse(res["success"])
+        self.assertEqual(self.db.get_all_categories()["data"], ["Mercado"])
+
+    def test_rename_subcategory_scoped_by_category(self):
+        # Mesma subcategoria "Carnes" em duas categorias diferentes --
+        # renomear dentro de uma não pode afetar a outra.
+        self.finance.add_expense("Acougue", "Picanha", subcategory="Carnes", amount="45.00")
+        self.finance.add_expense("Restaurante", "Prato", subcategory="Carnes", amount="30.00")
+
+        self.finance.rename_subcategory("Acougue", "Carnes", "Bovinos")
+
+        acougue_subs = {r["subcategory"] for r in self.db.get_subcategories_by_month_and_category(
+            __import__("datetime").datetime.now().strftime("%Y-%m"), "Acougue")["data"]}
+        restaurante_subs = {r["subcategory"] for r in self.db.get_subcategories_by_month_and_category(
+            __import__("datetime").datetime.now().strftime("%Y-%m"), "Restaurante")["data"]}
+        self.assertIn("Bovinos", acougue_subs)
+        self.assertIn("Carnes", restaurante_subs)
+
+    def test_rename_subcategory_from_empty_bucket_assigns_name(self):
+        self.finance.add_expense("Mercado", "Item avulso", "5.00")  # sem subcategoria
+        res = self.finance.rename_subcategory("Mercado", "", "Diversos")
+        self.assertTrue(res["success"])
+        from datetime import datetime
+        month = datetime.now().strftime("%Y-%m")
+        exps = self.db.get_expenses_by_month_and_category(month, "Mercado", "Diversos")
+        self.assertEqual(len(exps["data"]), 1)
+
+    def test_rename_subcategory_to_empty_clears_it(self):
+        self.finance.add_expense("Mercado", "Item", subcategory="Temp", amount="5.00")
+        self.finance.rename_subcategory("Mercado", "Temp", "")
+        from datetime import datetime
+        month = datetime.now().strftime("%Y-%m")
+        exps = self.db.get_expenses_by_month_and_category(month, "Mercado", "")
+        self.assertEqual(len(exps["data"]), 1)
+
+
 class TestSalaryCalendar(unittest.TestCase):
     """
     Testa a correcao do calendario de salario: em vez de assumir o mesmo
@@ -657,6 +986,9 @@ class TestAdditiveColumnMigration(unittest.TestCase):
         self.assertIn(row["quantity"], (Decimal("1"), Decimal("1.000")))
         self.assertEqual(row["unit_price"], Decimal("19.99"))
         self.assertIsNone(row["subcategory"])
+        self.assertEqual(row["is_variable_price"], 0)
+        self.assertIsNone(row["measure_value"])
+        self.assertIsNone(row["measure_unit"])
 
     def test_new_inserts_work_after_additive_migration(self):
         db = Database(db_path=self.path)
@@ -755,19 +1087,6 @@ class TestDatabaseEdgeCases(unittest.TestCase):
         self.assertTrue(res["success"])
         fetched = self.db.get_expense(res["id"])
         self.assertEqual(fetched["data"]["amount"], Decimal("10.99"))
-
-    def test_database_file_created(self):
-        """Testa criacao com arquivo real (nao :memory:)."""
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            path = f.name
-        try:
-            db = Database(db_path=path)
-            fin = FinanceService(db)
-            res = fin.add_expense("Teste", "Arquivo", 1.0)
-            self.assertTrue(res["success"])
-            self.assertTrue(os.path.exists(path))
-        finally:
-            os.unlink(path)
 
     def test_amount_persists_exactly_across_reconnect(self):
         """Reabre o mesmo arquivo (nova conexao) e confirma que o valor
@@ -1036,6 +1355,9 @@ class TestLegacyFloatMigration(unittest.TestCase):
         cols = {row[1]: row[2] for row in con.execute("PRAGMA table_info(expenses)")}
         con.close()
         self.assertEqual(cols["amount"].upper(), "DECIMAL")
+        self.assertIn("is_variable_price", cols)
+        self.assertIn("measure_value", cols)
+        self.assertIn("measure_unit", cols)
 
 
 # =============================================================================
@@ -1063,11 +1385,11 @@ class TestToDecimalHelper(unittest.TestCase):
         self.assertEqual(to_decimal("10.994"), Decimal("10.99"))
 
     def test_invalid_string_raises(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(InvalidOperation):
             to_decimal("abc")
 
     def test_empty_string_raises(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(InvalidOperation):
             to_decimal("")
 
 
@@ -1370,6 +1692,36 @@ class TestApiBridge(unittest.TestCase):
         self.assertTrue(set_res["success"])
         self.assertEqual(self.api.get_vacation_month()["month"], 12)
 
+    def test_api_add_expense_variable_price_with_weight(self):
+        res = self.api.add_expense("Feira", "Laranja", subcategory="Frutas",
+                                    quantity="4", unit_price="2.95", is_variable_price=True, measure_value="0.740")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["amount"], "2.95")
+        fetched = self.api.get_expense(res["id"])["data"]
+        self.assertEqual(fetched["measure_value"], "0.740")
+        self.assertEqual(fetched["measure_unit"], "kg")
+        self.assertEqual(fetched["quantity"], "4.000")
+
+    def test_api_update_expense_weight(self):
+        res = self.api.add_expense("Feira", "Arroz", quantity="3", unit_price="25.00")
+        upd = self.api.update_expense(res["id"], "Feira", "Arroz", None, None, "3", "25.00", None, False, "5", "g")
+        self.assertTrue(upd["success"])
+        fetched = self.api.get_expense(res["id"])["data"]
+        self.assertEqual(fetched["measure_value"], "5.000")
+        self.assertEqual(fetched["measure_unit"], "g")
+
+    def test_api_rename_category(self):
+        self.api.add_expense("Mercado", "Item", "10.00")
+        res = self.api.rename_category("Mercado", "Supermercado")
+        self.assertTrue(res["success"])
+        self.assertEqual(self.api.get_all_categories()["data"], ["Supermercado"])
+
+    def test_api_rename_subcategory(self):
+        self.api.add_expense("Acougue", "Picanha", subcategory="Carnes", unit_price="1", quantity="1")
+        res = self.api.rename_subcategory("Acougue", "Carnes", "Bovinos")
+        self.assertTrue(res["success"])
+        self.assertEqual(self.api.get_all_subcategories()["data"], ["Bovinos"])
+
 
 # =============================================================================
 # TESTES DE INTEGRACAO API + BALANCE
@@ -1523,11 +1875,6 @@ class TestDatabaseAdditionalEdgeCases(unittest.TestCase):
         self.assertTrue(res["success"])
         self.assertEqual(res["data"], [])
 
-    def test_get_categories_by_month_no_data(self):
-        res = self.db.get_categories_by_month("2000-01")
-        self.assertTrue(res["success"])
-        self.assertEqual(res["data"], [])
-
     def test_get_all_categories_empty_db(self):
         res = self.db.get_all_categories()
         self.assertTrue(res["success"])
@@ -1574,6 +1921,10 @@ if __name__ == "__main__":
     suite.addTests(loader.loadTestsFromTestCase(TestDatabaseCRUD))
     suite.addTests(loader.loadTestsFromTestCase(TestDatabaseAggregation))
     suite.addTests(loader.loadTestsFromTestCase(TestSubcategoryAndQuantity))
+    suite.addTests(loader.loadTestsFromTestCase(TestVariablePriceExpense))
+    suite.addTests(loader.loadTestsFromTestCase(TestMeasureUnits))
+    suite.addTests(loader.loadTestsFromTestCase(TestMeasureMigrationFromWeightKg))
+    suite.addTests(loader.loadTestsFromTestCase(TestCategoryRename))
     suite.addTests(loader.loadTestsFromTestCase(TestAdditiveColumnMigration))
     suite.addTests(loader.loadTestsFromTestCase(TestDatabaseBulk))
     suite.addTests(loader.loadTestsFromTestCase(TestDatabaseEdgeCases))

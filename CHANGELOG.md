@@ -6,6 +6,100 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/)
 (`MAJOR.MINOR.PATCH`) a partir da versão 2.0.0.
 
+## [3.4.0] - 2026-09-29
+
+### Adicionado
+- **Unidade no peso/volume: kg, g, ml e L.** O campo de peso da Nova
+  Despesa, do Editar Despesa e do Adicionar item virou "Peso ou volume",
+  com uma unidade clicável ao lado (kg, g, ml, L), então dá para anotar
+  740 g de laranja ou 1,5 L de suco. A unidade só acompanha o número
+  digitado: não há conversão (740 g continua sendo 740 g) e nada disso
+  entra em nenhuma conta. Sem número, a unidade é descartada. Na Árvore de
+  Gastos o item mostra como foi digitado ("740 g", "1,5 L", "500 ml").
+
+### Modificado
+- **Nova Despesa: volta ao layout compacto de antes.** A linha de cada
+  produto é de novo uma só (nome, preço, quantidade, subtotal, remover), e
+  o peso ganhou apenas uma linha fina logo abaixo, com o interruptor
+  "Peso variável", o número e a unidade. O comportamento do interruptor
+  não mudou (desligado: preço × quantidade; ligado: o valor é o total e
+  não multiplica).
+- **Banco de dados**: a coluna `weight_kg` (v3.3.1) foi renomeada para
+  `measure_value` e ganhou `measure_unit`. A migração é automática ao
+  abrir o app: os pesos já cadastrados são mantidos e marcados como "kg".
+  A API passou a usar `measure_value`/`measure_unit` no lugar de
+  `weight_kg`.
+
+## [3.3.1] - 2026-09-28
+
+### Modificado
+- **"Peso variável" redesenhado**: na 3.3.0 o interruptor trocava a
+  quantidade por um campo de peso (e escondia o +/-), o que impedia
+  registrar ao mesmo tempo *quantos itens* e *quanto pesam* (ex.: 3
+  pacotes de arroz de 5 kg; ou 4 laranjas que somaram 740 g). Agora as
+  duas coisas são independentes:
+  - a **quantidade** (com o +/- de sempre) nunca some nem muda de
+    significado, em nenhum modo;
+  - o **peso (kg)** é um campo próprio, opcional e sempre visível, logo
+    abaixo do nome do produto, com o interruptor "Peso variável" à frente
+    dele. É só uma anotação: nunca entra em nenhuma conta;
+  - o **interruptor** faz uma única coisa: desligado, a despesa funciona
+    normalmente (preço unitário × quantidade); ligado, o valor digitado é
+    o total pago e deixa de ser multiplicado pela quantidade. O único
+    ajuste visual é o rótulo do preço ("Preço" ⇄ "Valor total pago").
+  Vale para Nova Despesa, Editar Despesa e Adicionar item. Backend: nova
+  coluna `weight_kg` em `expenses` (migração automática, nula para
+  despesas antigas). Na Árvore de Gastos, cada detalhe aparece separado:
+  "2 × R$ 4,50", "4 un. · valor total (peso variável)", "0,74 kg".
+
+### Corrigido
+- **Não dava para alterar o peso de uma despesa já cadastrada** (o
+  interruptor no modal de edição só reaproveitava o campo de quantidade).
+  Agora o modal de edição tem o campo de peso próprio, carregado com o
+  valor salvo e editável (ou apagável).
+
+## [3.3.0] - 2026-09-28
+
+### Adicionado
+- **Peso variável (itens comprados por kg)**: novo interruptor "Peso
+  variável" por produto na Nova Despesa, no modal de Editar Despesa e no
+  novo "Adicionar item" da Árvore de Gastos. Ligado, o valor digitado
+  passa a ser o **total pago** (rótulo vira "Valor total pago") e a
+  quantidade vira só o **peso em kg**, informativo — *não multiplica*.
+  Resolve o caso de 4 laranjas que pesaram 0,740 kg e custaram R$ 2,95
+  no total: antes, qualquer quantidade multiplicaria o valor (4 × 2,95 =
+  11,80, errado). Os botões +/- somem nesse modo (não faz sentido somar
+  1 kg por clique) e o subtotal já reflete o total exato na hora. Na
+  Árvore de Gastos, o item mostra "0,74 kg · valor total (peso
+  variável)". Backend: nova coluna `is_variable_price` em `expenses`
+  (migração automática, padrão 0 — nada muda para despesas antigas);
+  `resolve_amount` ganhou o parâmetro `is_variable_price`, e o "preço por
+  kg" derivado (total ÷ peso) é gravado só para referência, nunca usado
+  para recalcular o valor. Itens normais e de peso variável podem ser
+  misturados na mesma Nova Despesa. (Despesas Mensais não ganharam esse
+  modo nesta versão.)
+- **Renomear categorias e subcategorias**: ícone de lápis nos cards de
+  categoria e de subcategoria e ao lado do título da lista de despesas.
+  O renome é **global** — vale para todos os meses e também para os
+  templates de Despesa Mensal, já que categoria é só uma etiqueta de
+  texto reaproveitada. Subcategorias são renomeadas dentro da própria
+  categoria (uma "Carnes" em Açougue não afeta uma "Carnes" em
+  Restaurante). Renomear o balde "Sem subcategoria" dá um nome aos itens
+  sem subcategoria; deixar o novo nome vazio remove a subcategoria.
+- **Adicionar item direto na categoria/subcategoria**: botão "Adicionar
+  item" na lista de despesas da Árvore de Gastos, já com categoria e
+  subcategoria preenchidas — não precisa voltar à Nova Despesa e
+  redigitar tudo. O item entra com a data/hora de agora, como na Nova
+  Despesa (para outra data, use o lápis de editar depois).
+- **Yuan chinês (CNY)** na lista de moedas de exibição.
+
+### Corrigido
+- **Compras da mesma subcategoria em dias diferentes pareciam uma só**:
+  as despesas ficavam numa lista contínua, só com a data em cada linha.
+  Agora a lista é agrupada por dia, com um cabeçalho ("domingo,
+  20/09/2026") e o total daquele dia; a coluna da tabela passou de
+  "Data" para "Hora", já que a data está no cabeçalho do grupo.
+
 ## [3.2.0] - 2026-09-27
 
 ### Adicionado

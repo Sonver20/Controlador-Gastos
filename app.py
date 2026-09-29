@@ -154,8 +154,8 @@ class Api:
     # Despesas: escrita com ajuste de saldo (services/finance.py)
     # ------------------------------------------------------------------
     @jsonify_result
-    def add_expense(self, category: str, description: str, amount=None, subcategory=None, quantity=None, unit_price=None):
-        return self.finance.add_expense(category, description, amount, subcategory, quantity, unit_price)
+    def add_expense(self, category: str, description: str, amount=None, subcategory=None, quantity=None, unit_price=None, is_variable_price=False, measure_value=None, measure_unit=None):
+        return self.finance.add_expense(category, description, amount, subcategory, quantity, unit_price, is_variable_price, measure_value, measure_unit)
 
     @jsonify_result
     def add_expenses_bulk(self, category: str, lines: str):
@@ -171,8 +171,8 @@ class Api:
         return self.finance.add_expenses_structured(category, subcategory, products)
 
     @jsonify_result
-    def update_expense(self, expense_id: int, category: str, description: str, amount=None, subcategory=None, quantity=None, unit_price=None, date_str=None):
-        return self.finance.update_expense(expense_id, category, description, amount, subcategory, quantity, unit_price, date_str)
+    def update_expense(self, expense_id: int, category: str, description: str, amount=None, subcategory=None, quantity=None, unit_price=None, date_str=None, is_variable_price=False, measure_value=None, measure_unit=None):
+        return self.finance.update_expense(expense_id, category, description, amount, subcategory, quantity, unit_price, date_str, is_variable_price, measure_value, measure_unit)
 
     @jsonify_result
     def delete_expense(self, expense_id: int):
@@ -231,6 +231,15 @@ class Api:
 
     def get_all_subcategories(self):
         return self.db.get_all_subcategories()
+
+    # ------------------------------------------------------------------
+    # Categorias / subcategorias: renomear (Árvore de Gastos, services/finance.py)
+    # ------------------------------------------------------------------
+    def rename_category(self, old_category: str, new_category: str):
+        return self.finance.rename_category(old_category, new_category)
+
+    def rename_subcategory(self, category: str, old_subcategory, new_subcategory):
+        return self.finance.rename_subcategory(category, old_subcategory, new_subcategory)
 
 
 if __name__ == "__main__":

@@ -24,8 +24,22 @@ CG.modals = (function () {
             document.getElementById('edit-subcategory').value = res.data.subcategory || '';
             document.getElementById('edit-description').value = res.data.description;
             CG.datepicker.setValue('edit-date', res.data.created_at.split(' ')[0]);
-            document.getElementById('edit-unit-price').value = CG.utils.formatPrice(res.data.unit_price);
+
+            const isVariable = !!res.data.is_variable_price;
+            document.getElementById('edit-variable-price').checked = isVariable;
+            // Peso variável: o valor total pago é que importa (não o
+            // "preço por kg" derivado só pra referência) -- ver
+            // services/finance.py resolve_amount().
+            document.getElementById('edit-unit-price').value = isVariable
+                ? CG.utils.formatPrice(res.data.amount)
+                : CG.utils.formatPrice(res.data.unit_price);
             document.getElementById('edit-quantity').value = CG.utils.formatQuantity(res.data.quantity);
+            // Peso ou volume (kg, g, ml, L): opcional e independente da
+            // quantidade e do toggle. Sem valor salvo, a unidade volta a "kg".
+            const hasMeasure = res.data.measure_value !== null && res.data.measure_value !== undefined && res.data.measure_value !== '';
+            document.getElementById('edit-measure').value = hasMeasure ? CG.utils.formatQuantity(res.data.measure_value) : '';
+            document.getElementById('edit-measure-unit').value = (hasMeasure && res.data.measure_unit) ? res.data.measure_unit : 'kg';
+            applyEditVariablePriceUI(isVariable);
             updateEditTotal();
 
             document.getElementById('edit-modal').classList.remove('hidden');
@@ -48,10 +62,31 @@ CG.modals = (function () {
         updateEditTotal();
     }
 
+    /**
+     * O interruptor "Peso variável" só decide se o valor multiplica pela
+     * quantidade (ver register.js/toggleVariablePrice, mesmo conceito na
+     * Nova Despesa). A quantidade e o peso não mudam em nada: o único
+     * ajuste visual é o rótulo do preço, que passa a dizer que ali vai o
+     * total pago em vez do preço unitário.
+     */
+    function applyEditVariablePriceUI(checked) {
+        const priceLabel = document.getElementById('edit-price-label');
+        const priceKey = checked ? 'edit_modal.total_paid_label' : 'edit_modal.unit_price';
+        priceLabel.setAttribute('data-i18n', priceKey);
+        priceLabel.textContent = CG.i18n.t(priceKey);
+    }
+
+    function toggleEditVariablePrice() {
+        applyEditVariablePriceUI(document.getElementById('edit-variable-price').checked);
+        updateEditTotal();
+    }
+
     function updateEditTotal() {
         const price = CG.utils.parseLocaleNumber(document.getElementById('edit-unit-price').value);
         const qty = CG.utils.parseLocaleNumber(document.getElementById('edit-quantity').value);
-        document.getElementById('edit-total-display').textContent = formatCurrency(price * qty);
+        const isVariable = document.getElementById('edit-variable-price').checked;
+        const total = isVariable ? price : price * qty;
+        document.getElementById('edit-total-display').textContent = formatCurrency(total);
     }
 
     async function submitEdit() {
@@ -64,6 +99,9 @@ CG.modals = (function () {
         // em pt-BR) antes de validar e enviar pro backend.
         const unitPriceStr = document.getElementById('edit-unit-price').value.trim().replace(',', '.');
         const quantityStr = document.getElementById('edit-quantity').value.trim().replace(',', '.');
+        const isVariablePrice = document.getElementById('edit-variable-price').checked;
+        const measureStr = document.getElementById('edit-measure').value.trim().replace(',', '.');
+        const measureUnit = document.getElementById('edit-measure-unit').value;
 
         const price = parseFloat(unitPriceStr);
         const qty = parseFloat(quantityStr);
@@ -72,9 +110,16 @@ CG.modals = (function () {
             return;
         }
 
+        // Peso/volume é opcional; se preenchido, precisa ser um número positivo.
+        if (measureStr && (isNaN(parseFloat(measureStr)) || parseFloat(measureStr) <= 0)) {
+            CG.toast.show(CG.i18n.t('edit_modal.invalid_measure_warning'), 'warning');
+            return;
+        }
+
         try {
             const res = await CG.api.call('update_expense',
-                id, category, description, null, subcategory || null, quantityStr, unitPriceStr, dateVal
+                id, category, description, null, subcategory || null, quantityStr, unitPriceStr, dateVal,
+                isVariablePrice, measureStr || null, measureStr ? measureUnit : null
             );
             if (res.success) {
                 CG.i18n.showApiResult(res, 'success');
@@ -126,7 +171,7 @@ CG.modals = (function () {
     }
 
     return {
-        openEdit, closeEdit, stepEditQty, updateEditTotal, submitEdit,
+        openEdit, closeEdit, stepEditQty, toggleEditVariablePrice, updateEditTotal, submitEdit,
         openDelete, closeDelete, confirmDelete,
     };
 })();

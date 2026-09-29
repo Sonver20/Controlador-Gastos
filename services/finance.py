@@ -27,13 +27,26 @@ from .decimal_utils import to_decimal, to_quantity, TWO_PLACES
 from database import Database
 
 
-def resolve_amount(amount: Any, quantity: Any, unit_price: Any):
+def resolve_amount(amount: Any, quantity: Any, unit_price: Any, is_variable_price: bool = False):
     """
-    Decide como calcular o valor final de uma despesa:
-    - Se quantidade + preco unitario forem informados, o total e
-      calculado como preco_unitario * quantidade (arredondado para 2
-      casas decimais).
-    - Caso contrario, usa o valor direto informado em `amount`, com
+    Decide como calcular o valor final de uma despesa. Três modos:
+
+    - `is_variable_price=True` (item comprado por peso variável, ex.:
+      fruta ou carne por kg): `unit_price` aqui carrega o VALOR TOTAL já
+      pago (não um preço por unidade) -- `quantity` continua sendo a
+      CONTAGEM de itens normalmente (ex.: "4" laranjas) e NÃO entra na
+      conta, exatamente para evitar multiplicar por engano um total que
+      já é o total (ex.: 4 laranjas pesando 0,740kg por R$2,95 no total
+      -- multiplicar pela contagem de laranjas daria um valor errado). Um
+      preço "por item" aparente (`unit_price` de retorno) é derivado só
+      para exibição/edição futura (amount / quantity), sem nunca ser
+      usado para recalcular `amount`. O peso em si (kg) é um campo
+      totalmente separado (`measure_value`/`measure_unit`, ver
+      `_prepare_expense_fields`), puramente informativo em QUALQUER modo --
+      nunca entra aqui.
+    - Quantidade + preço unitário informados (modo normal): o total é
+      preco_unitario * quantidade (arredondado para 2 casas decimais).
+    - Caso contrário: usa o valor direto informado em `amount`, com
       quantidade implicita = 1 e preco unitario = o proprio valor.
 
     Retorna a tupla (quantity_decimal, unit_price_decimal, amount_decimal).
@@ -41,6 +54,15 @@ def resolve_amount(amount: Any, quantity: Any, unit_price: Any):
     """
     has_quantity = quantity is not None and str(quantity).strip() != ""
     has_unit_price = unit_price is not None and str(unit_price).strip() != ""
+    if is_variable_price:
+        if not has_unit_price:
+            raise InvalidOperation("valor total obrigatório para item de peso variável")
+        amt = to_decimal(unit_price)
+        qty = to_quantity(quantity) if has_quantity else Decimal("1")
+        if qty <= 0:
+            raise InvalidOperation("quantidade deve ser maior que zero")
+        price = (amt / qty).quantize(TWO_PLACES, rounding=ROUND_HALF_UP) if qty > 0 else amt
+        return qty, price, amt
     if has_quantity and has_unit_price:
         qty = to_quantity(quantity)
         if qty <= 0:
@@ -52,6 +74,33 @@ def resolve_amount(amount: Any, quantity: Any, unit_price: Any):
     return Decimal("1"), amt, amt
 
 
+# Unidades aceitas no campo opcional de peso/volume, na ordem em que o
+# frontend as oferece. A unidade só acompanha o número digitado (não há
+# conversão: 740 g continua sendo 740 g) -- é anotação, nunca entra em conta.
+MEASURE_UNITS = ("kg", "g", "ml", "L")
+_MEASURE_UNIT_LOOKUP = {u.lower(): u for u in MEASURE_UNITS}
+
+
+def parse_optional_measure(value: Any, unit: Any = None):
+    """
+    Converte o campo opcional de peso/volume + unidade para
+    (Decimal, unidade canônica), ou (None, None) se o valor estiver vazio
+    (a unidade sozinha, sem número, é descartada). Unidade ausente vira
+    "kg" (compatível com quem só manda o número); unidade fora de
+    MEASURE_UNITS levanta ValueError. Puramente informativo: nunca entra em
+    nenhum cálculo (ver `resolve_amount`).
+    """
+    if value is None or str(value).strip() == "":
+        return None, None
+    amount = to_quantity(value)
+    if amount <= 0:
+        raise InvalidOperation("peso/volume deve ser maior que zero")
+    key = str(unit).strip().lower() if unit is not None and str(unit).strip() != "" else "kg"
+    if key not in _MEASURE_UNIT_LOOKUP:
+        raise ValueError(f"unidade inválida: {unit}")
+    return amount, _MEASURE_UNIT_LOOKUP[key]
+
+
 class FinanceService:
     def __init__(self, db: Database):
         self.db = db
@@ -60,16 +109,21 @@ class FinanceService:
     # Preparação de campos (compartilhado por add/update)
     # ------------------------------------------------------------------
     def _prepare_expense_fields(self, category: str, description: str, amount: Any,
-                                 subcategory: Optional[str], quantity: Any, unit_price: Any):
+                                 subcategory: Optional[str], quantity: Any, unit_price: Any,
+                                 is_variable_price: bool = False, measure_value: Any = None,
+                                 measure_unit: Any = None):
         """
         Resolve os campos de uma despesa antes de gravar: calcula o valor
-        final (direto, ou preco unitario x quantidade) e normaliza
-        categoria/subcategoria/descrição. Pode levantar
-        InvalidOperation/ValueError/TypeError para entradas invalidas.
+        final (direto, peso variável, ou preco unitario x quantidade),
+        normaliza categoria/subcategoria/descrição, e converte o peso ou
+        volume (com unidade) opcional -- independente de tudo isso, nunca entra na conta. Pode
+        levantar InvalidOperation/ValueError/TypeError para entradas
+        invalidas.
         """
-        qty, price, amt = resolve_amount(amount, quantity, unit_price)
+        qty, price, amt = resolve_amount(amount, quantity, unit_price, is_variable_price)
         sub = (subcategory or "").strip() or None
-        return category.strip(), sub, description.strip(), amt, qty, price
+        m_value, m_unit = parse_optional_measure(measure_value, measure_unit)
+        return category.strip(), sub, description.strip(), amt, qty, price, m_value, m_unit
 
     # ------------------------------------------------------------------
     # Saldo
@@ -116,16 +170,18 @@ class FinanceService:
     # ------------------------------------------------------------------
     def add_expense(self, category: str, description: str, amount: Any = None,
                      subcategory: Optional[str] = None, quantity: Any = None,
-                     unit_price: Any = None) -> Dict[str, Any]:
+                     unit_price: Any = None, is_variable_price: bool = False,
+                     measure_value: Any = None, measure_unit: Any = None) -> Dict[str, Any]:
         """Registra uma despesa e desconta o valor calculado do saldo."""
         try:
-            cat, sub, desc, amt, qty, price = self._prepare_expense_fields(
-                category, description, amount, subcategory, quantity, unit_price
+            cat, sub, desc, amt, qty, price, m_value, m_unit = self._prepare_expense_fields(
+                category, description, amount, subcategory, quantity, unit_price, is_variable_price,
+                measure_value, measure_unit
             )
         except (InvalidOperation, ValueError, TypeError):
             return {"success": False, "id": None, "message": f"Valor inválido: '{amount}'", "key": "validation.invalid_value", "params": {"value": str(amount)}}
 
-        res = self.db.insert_expense(cat, sub, desc, amt, qty, price)
+        res = self.db.insert_expense(cat, sub, desc, amt, qty, price, is_variable_price, m_value, m_unit)
         if res["success"]:
             res["amount"] = amt
             self.subtract_from_balance(amt)
@@ -133,7 +189,8 @@ class FinanceService:
 
     def update_expense(self, expense_id: int, category: str, description: str, amount: Any = None,
                         subcategory: Optional[str] = None, quantity: Any = None, unit_price: Any = None,
-                        date_str: Optional[str] = None) -> Dict[str, Any]:
+                        date_str: Optional[str] = None, is_variable_price: bool = False,
+                        measure_value: Any = None, measure_unit: Any = None) -> Dict[str, Any]:
         """
         Atualiza uma despesa. Se o valor mudou (por editar preco e/ou
         quantidade), ajusta o saldo pela DIFERENCA entre o valor antigo e
@@ -143,8 +200,9 @@ class FinanceService:
         despesa preservando o horario original.
         """
         try:
-            cat, sub, desc, amt, qty, price = self._prepare_expense_fields(
-                category, description, amount, subcategory, quantity, unit_price
+            cat, sub, desc, amt, qty, price, m_value, m_unit = self._prepare_expense_fields(
+                category, description, amount, subcategory, quantity, unit_price, is_variable_price,
+                measure_value, measure_unit
             )
         except (InvalidOperation, ValueError, TypeError):
             return {"success": False, "message": f"Valor inválido: '{amount}'", "key": "validation.invalid_value", "params": {"value": str(amount)}}
@@ -166,7 +224,7 @@ class FinanceService:
             time_part = old_created_at.split(" ", 1)[1] if " " in old_created_at else "00:00:00"
             created_at = f"{date_str} {time_part}"
 
-        res = self.db.update_expense_row(expense_id, cat, sub, desc, amt, qty, price, created_at)
+        res = self.db.update_expense_row(expense_id, cat, sub, desc, amt, qty, price, created_at, is_variable_price, m_value, m_unit)
         if res["success"]:
             res["amount"] = amt
             delta = amt - old_amount
@@ -240,7 +298,14 @@ class FinanceService:
         """
         Nova Despesa unificada: uma categoria/subcategoria compartilhada e
         uma lista de produtos (nome, preco unitario, quantidade). `products`:
-        lista de dicts com "description", "unit_price" e "quantity".
+        lista de dicts com "description", "unit_price" e "quantity", e
+        opcionalmente `is_variable_price` (item de peso variável -- ver
+        `resolve_amount`) e `measure_value`/`measure_unit` (peso ou volume
+        opcional -- kg, g, ml ou L -- sempre só informativo), cada um
+        independente por produto: numa mesma Nova Despesa é possível
+        misturar itens normais com itens de peso variável, e anotar peso
+        ou volume em QUALQUER um dos dois (ex.: "3 pacotes de arroz de
+        5kg" é modo normal com measure_value="5" -- o peso não muda a conta).
         """
         inserted = 0
         errors: List[str] = []
@@ -251,8 +316,10 @@ class FinanceService:
 
         for item in products:
             desc = str(item.get("description", "")).strip()
+            is_variable = bool(item.get("is_variable_price"))
             try:
-                qty, price, amt = resolve_amount(None, item.get("quantity"), item.get("unit_price"))
+                qty, price, amt = resolve_amount(None, item.get("quantity"), item.get("unit_price"), is_variable)
+                m_value, m_unit = parse_optional_measure(item.get("measure_value"), item.get("measure_unit"))
             except (InvalidOperation, ValueError, TypeError):
                 errors.append(f"Dados inválidos: {item}")
                 continue
@@ -262,6 +329,8 @@ class FinanceService:
             rows.append({
                 "category": cat, "subcategory": sub, "description": desc,
                 "amount": amt, "quantity": qty, "unit_price": price,
+                "is_variable_price": is_variable,
+                "measure_value": m_value, "measure_unit": m_unit,
             })
             inserted += 1
             total += amt
@@ -277,3 +346,34 @@ class FinanceService:
         return {"success": True, "inserted": inserted, "errors": errors, "total": total,
                 "message": f"{inserted} despesa(s) registrada(s).",
                 "key": "expenses.structured.result", "params": {"inserted": inserted}}
+
+    # ------------------------------------------------------------------
+    # Categorias / subcategorias: renomear (Árvore de Gastos)
+    # ------------------------------------------------------------------
+    def rename_category(self, old_category: str, new_category: str) -> Dict[str, Any]:
+        """Renomeia uma categoria (ver database.rename_category: é global,
+        vale para todos os meses e para os templates de Despesa Mensal)."""
+        old_c = (old_category or "").strip()
+        new_c = (new_category or "").strip()
+        if not new_c:
+            return {"success": False, "message": "Informe um nome para a categoria.", "key": "tree.rename_name_required"}
+        if old_c == new_c:
+            return {"success": True, "message": "Nenhuma alteração.", "key": "tree.category_renamed"}
+        try:
+            return self.db.rename_category(old_c, new_c)
+        except sqlite3.Error as e:
+            return {"success": False, "message": f"Erro ao renomear categoria: {e}", "key": "tree.rename_error", "params": {"error": str(e)}}
+
+    def rename_subcategory(self, category: str, old_subcategory: Optional[str], new_subcategory: Optional[str]) -> Dict[str, Any]:
+        """Renomeia uma subcategoria dentro de uma categoria (ver
+        database.rename_subcategory para o significado de valores vazios)."""
+        new_s = (new_subcategory or "").strip()
+        old_s = (old_subcategory or "").strip()
+        if not new_s and not old_s:
+            return {"success": True, "message": "Nenhuma alteração.", "key": "tree.subcategory_renamed"}
+        if old_s == new_s:
+            return {"success": True, "message": "Nenhuma alteração.", "key": "tree.subcategory_renamed"}
+        try:
+            return self.db.rename_subcategory((category or "").strip(), old_subcategory, new_subcategory)
+        except sqlite3.Error as e:
+            return {"success": False, "message": f"Erro ao renomear subcategoria: {e}", "key": "tree.rename_error", "params": {"error": str(e)}}

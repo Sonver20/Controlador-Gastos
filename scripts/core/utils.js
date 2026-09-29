@@ -68,8 +68,16 @@ CG.utils = (function () {
         // mas cada uma seguindo a ordem/convenção do idioma atual:
         // pt-BR -> "23/09/26 14:05" (24h) / en-US -> "09/23/26 2:05 PM" (12h).
         const datePart = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: '2-digit' }).format(date);
-        const timePart = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date);
-        return `${datePart} ${timePart}`;
+        return `${datePart} ${formatTime(isoString)}`;
+    }
+
+    /** Só o horário (usado na Árvore de Gastos, onde a data já vira um
+     * cabeçalho de grupo por dia -- ver scripts/features/tree.js). */
+    function formatTime(isoString) {
+        if (!isoString) return '-';
+        const date = new Date(isoString.replace(' ', 'T'));
+        const locale = (window.CG && CG.i18n) ? CG.i18n.locale() : 'pt-BR';
+        return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date);
     }
 
     function formatDateBR(dateStr) {
@@ -99,6 +107,7 @@ CG.utils = (function () {
         parseLocaleNumber,
         formatMonth,
         formatDateTime,
+        formatTime,
         formatDateBR,
         currentMonthKey,
         escapeHtml,
