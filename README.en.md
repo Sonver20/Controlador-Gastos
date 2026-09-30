@@ -8,7 +8,7 @@ Native desktop application for personal finance management, built with
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![PyWebView](https://img.shields.io/badge/PyWebView-5.0+-green?logo=python)
 ![SQLite](https://img.shields.io/badge/SQLite-3-orange?logo=sqlite)
-![Version](https://img.shields.io/badge/version-3.3.0-blueviolet)
+![Version](https://img.shields.io/badge/version-3.4.1-blueviolet)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
@@ -188,11 +188,19 @@ database swappable.
 
 ## Tests
 
-Run the automated tests:
+Run all the automated tests:
 
 ```bash
-python3 tests.py -v
+python3 tests/main.py             # everything, detailed output
+python3 tests/main.py -q          # quiet: only failures and the summary
+python3 tests/main.py config api  # only modules whose name contains "config" or "api"
 ```
+
+The tests live in `tests/`, one `test_*.py` file per topic (database,
+migrations, variable weight, Api, settings, etc.). `main.py` discovers them
+all on its own — a new file is picked up without registering it anywhere —
+and exits with code 0 (all passed) or 1 (some failure). The `Api` tests use a
+temporary folder: they never touch your `gastos.db` or your `app_config.json`.
 
 Coverage:
 
@@ -203,6 +211,8 @@ Coverage:
 - **Balance and salary** (crediting, debiting, field preservation on updates)
 - **Salary calendar** with 30-day-cycle projection and vacation pay calculation (Brazilian INSS/IRRF)
 - **Monthly Expenses** (creation, application, no duplication within the same month)
+- **Variable weight and units** (total value without multiplying; weight/volume in kg, g, ml, L)
+- **Renaming categories and subcategories** (global, including Monthly Expenses)
 - **Automatic migration** of legacy databases (`REAL` → `DECIMAL` columns, additive new columns)
 - **Rollback** on exception mid-transaction
 - **API Bridge** — every method exposed to JavaScript

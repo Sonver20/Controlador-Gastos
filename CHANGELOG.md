@@ -6,6 +6,35 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/)
 (`MAJOR.MINOR.PATCH`) a partir da versão 2.0.0.
 
+## [3.4.1] - 2026-09-29
+
+### Modificado
+- **Testes modularizados em `tests/`**: o `tests.py` único (quase 1.900
+  linhas) foi dividido em 18 módulos por assunto (`test_expenses_crud`,
+  `test_migrations`, `test_variable_price`, `test_measure_units`,
+  `test_config`, `test_api_bridge` etc.), mais `tests/helpers.py` (utilitários
+  compartilhados) e `tests/main.py`, que executa tudo:
+  `python3 tests/main.py` (`-q` para silencioso; nomes de módulo filtram, ex.:
+  `python3 tests/main.py config api`). O `main.py` **descobre os arquivos
+  sozinho** — antes, um teste novo só rodava se a classe fosse registrada à mão
+  numa lista no rodapé do arquivo, e esquecer disso fazia o teste simplesmente
+  não executar. O código de saída é 0 quando tudo passa e 1 quando há falha.
+  Nenhum teste foi perdido ou renomeado na divisão (mesmos nomes de classe e de
+  método). **Se você atualizar por cima da pasta antiga, apague o `tests.py`
+  da raiz** — a cópia por cima não remove arquivos.
+- **Testes da `Api` não tocam mais nos arquivos reais**: `Api()` abre o
+  `gastos.db` e o `app_config.json` da pasta do projeto, então rodar os testes
+  abria (e migrava) o banco de quem os executava, e ainda deixava pastas
+  temporárias para trás. Agora as classes que herdam de `ApiTestCase` rodam
+  com a pasta base redirecionada para um diretório temporário, apagado no fim
+  de cada teste.
+
+### Removido
+- 3 testes redundantes entre as classes de peso variável e de unidades (o
+  que tinham de único foi mesclado nos testes que ficaram: 195 → 192 testes,
+  sem perda de cobertura — quebrar o código de propósito continua sendo
+  acusado pelos mesmos casos).
+
 ## [3.4.0] - 2026-09-29
 
 ### Adicionado

@@ -8,7 +8,7 @@ Aplicativo desktop nativo para controle financeiro pessoal, construído com
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![PyWebView](https://img.shields.io/badge/PyWebView-5.0+-green?logo=python)
 ![SQLite](https://img.shields.io/badge/SQLite-3-orange?logo=sqlite)
-![Version](https://img.shields.io/badge/version-3.3.0-blueviolet)
+![Version](https://img.shields.io/badge/version-3.4.1-blueviolet)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
@@ -188,11 +188,20 @@ substituível.
 
 ## Testes
 
-Execute os testes automatizados:
+Execute todos os testes automatizados:
 
 ```bash
-python3 tests.py -v
+python3 tests/main.py             # todos, saída detalhada
+python3 tests/main.py -q          # silencioso: só falhas e o resumo
+python3 tests/main.py config api  # só os módulos cujo nome contém "config" ou "api"
 ```
+
+Os testes ficam em `tests/`, um arquivo `test_*.py` por assunto (banco de
+dados, migrações, peso variável, Api, configurações etc.). O `main.py`
+descobre todos sozinho — um arquivo novo entra na execução sem precisar ser
+registrado em lugar nenhum — e termina com código de saída 0 (tudo passou)
+ou 1 (alguma falha). Os testes da `Api` usam uma pasta temporária: nunca
+encostam no seu `gastos.db` nem no seu `app_config.json`.
 
 Cobertura:
 
@@ -203,6 +212,8 @@ Cobertura:
 - **Saldo e salário** (crédito, débito, preservação de campos em updates)
 - **Calendário de salários** com projeção de 30 em 30 dias e cálculo de férias (INSS/IRRF)
 - **Despesas Mensais** (criação, aplicação, não-duplicação no mesmo mês)
+- **Peso variável e unidades** (valor total sem multiplicar; peso/volume em kg, g, ml, L)
+- **Renomear categorias e subcategorias** (global, inclusive nas Despesas Mensais)
 - **Migração automática** de bancos antigos (colunas `REAL` → `DECIMAL`, novas colunas aditivas)
 - **Rollback** em caso de exceção no meio de uma transação
 - **API Bridge** — todos os métodos expostos ao JavaScript
