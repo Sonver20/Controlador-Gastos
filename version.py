@@ -18,4 +18,4 @@ Api.get_app_version(), então não precisa (e não deve) ser editado em
 mais nenhum outro lugar.
 """
 
-APP_VERSION = "3.4.1"
+APP_VERSION = "3.3.0"

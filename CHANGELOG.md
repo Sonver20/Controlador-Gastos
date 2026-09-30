@@ -6,121 +6,78 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/)
 (`MAJOR.MINOR.PATCH`) a partir da versão 2.0.0.
 
-## [3.4.1] - 2026-09-29
-
-### Modificado
-- **Testes modularizados em `tests/`**: o `tests.py` único (quase 1.900
-  linhas) foi dividido em 18 módulos por assunto (`test_expenses_crud`,
-  `test_migrations`, `test_variable_price`, `test_measure_units`,
-  `test_config`, `test_api_bridge` etc.), mais `tests/helpers.py` (utilitários
-  compartilhados) e `tests/main.py`, que executa tudo:
-  `python3 tests/main.py` (`-q` para silencioso; nomes de módulo filtram, ex.:
-  `python3 tests/main.py config api`). O `main.py` **descobre os arquivos
-  sozinho** — antes, um teste novo só rodava se a classe fosse registrada à mão
-  numa lista no rodapé do arquivo, e esquecer disso fazia o teste simplesmente
-  não executar. O código de saída é 0 quando tudo passa e 1 quando há falha.
-  Nenhum teste foi perdido ou renomeado na divisão (mesmos nomes de classe e de
-  método). **Se você atualizar por cima da pasta antiga, apague o `tests.py`
-  da raiz** — a cópia por cima não remove arquivos.
-- **Testes da `Api` não tocam mais nos arquivos reais**: `Api()` abre o
-  `gastos.db` e o `app_config.json` da pasta do projeto, então rodar os testes
-  abria (e migrava) o banco de quem os executava, e ainda deixava pastas
-  temporárias para trás. Agora as classes que herdam de `ApiTestCase` rodam
-  com a pasta base redirecionada para um diretório temporário, apagado no fim
-  de cada teste.
-
-### Removido
-- 3 testes redundantes entre as classes de peso variável e de unidades (o
-  que tinham de único foi mesclado nos testes que ficaram: 195 → 192 testes,
-  sem perda de cobertura — quebrar o código de propósito continua sendo
-  acusado pelos mesmos casos).
-
-## [3.4.0] - 2026-09-29
+## [3.3.0] - 2026-09-29
 
 ### Adicionado
-- **Unidade no peso/volume: kg, g, ml e L.** O campo de peso da Nova
-  Despesa, do Editar Despesa e do Adicionar item virou "Peso ou volume",
-  com uma unidade clicável ao lado (kg, g, ml, L), então dá para anotar
-  740 g de laranja ou 1,5 L de suco. A unidade só acompanha o número
-  digitado: não há conversão (740 g continua sendo 740 g) e nada disso
-  entra em nenhuma conta. Sem número, a unidade é descartada. Na Árvore de
-  Gastos o item mostra como foi digitado ("740 g", "1,5 L", "500 ml").
-
-### Modificado
-- **Nova Despesa: volta ao layout compacto de antes.** A linha de cada
-  produto é de novo uma só (nome, preço, quantidade, subtotal, remover), e
-  o peso ganhou apenas uma linha fina logo abaixo, com o interruptor
-  "Peso variável", o número e a unidade. O comportamento do interruptor
-  não mudou (desligado: preço × quantidade; ligado: o valor é o total e
-  não multiplica).
-- **Banco de dados**: a coluna `weight_kg` (v3.3.1) foi renomeada para
-  `measure_value` e ganhou `measure_unit`. A migração é automática ao
-  abrir o app: os pesos já cadastrados são mantidos e marcados como "kg".
-  A API passou a usar `measure_value`/`measure_unit` no lugar de
-  `weight_kg`.
-
-## [3.3.1] - 2026-09-28
-
-### Modificado
-- **"Peso variável" redesenhado**: na 3.3.0 o interruptor trocava a
-  quantidade por um campo de peso (e escondia o +/-), o que impedia
-  registrar ao mesmo tempo *quantos itens* e *quanto pesam* (ex.: 3
-  pacotes de arroz de 5 kg; ou 4 laranjas que somaram 740 g). Agora as
-  duas coisas são independentes:
-  - a **quantidade** (com o +/- de sempre) nunca some nem muda de
-    significado, em nenhum modo;
-  - o **peso (kg)** é um campo próprio, opcional e sempre visível, logo
-    abaixo do nome do produto, com o interruptor "Peso variável" à frente
-    dele. É só uma anotação: nunca entra em nenhuma conta;
-  - o **interruptor** faz uma única coisa: desligado, a despesa funciona
-    normalmente (preço unitário × quantidade); ligado, o valor digitado é
-    o total pago e deixa de ser multiplicado pela quantidade. O único
-    ajuste visual é o rótulo do preço ("Preço" ⇄ "Valor total pago").
-  Vale para Nova Despesa, Editar Despesa e Adicionar item. Backend: nova
-  coluna `weight_kg` em `expenses` (migração automática, nula para
-  despesas antigas). Na Árvore de Gastos, cada detalhe aparece separado:
-  "2 × R$ 4,50", "4 un. · valor total (peso variável)", "0,74 kg".
-
-### Corrigido
-- **Não dava para alterar o peso de uma despesa já cadastrada** (o
-  interruptor no modal de edição só reaproveitava o campo de quantidade).
-  Agora o modal de edição tem o campo de peso próprio, carregado com o
-  valor salvo e editável (ou apagável).
-
-## [3.3.0] - 2026-09-28
-
-### Adicionado
-- **Peso variável (itens comprados por kg)**: novo interruptor "Peso
-  variável" por produto na Nova Despesa, no modal de Editar Despesa e no
-  novo "Adicionar item" da Árvore de Gastos. Ligado, o valor digitado
-  passa a ser o **total pago** (rótulo vira "Valor total pago") e a
-  quantidade vira só o **peso em kg**, informativo — *não multiplica*.
-  Resolve o caso de 4 laranjas que pesaram 0,740 kg e custaram R$ 2,95
-  no total: antes, qualquer quantidade multiplicaria o valor (4 × 2,95 =
-  11,80, errado). Os botões +/- somem nesse modo (não faz sentido somar
-  1 kg por clique) e o subtotal já reflete o total exato na hora. Na
-  Árvore de Gastos, o item mostra "0,74 kg · valor total (peso
-  variável)". Backend: nova coluna `is_variable_price` em `expenses`
-  (migração automática, padrão 0 — nada muda para despesas antigas);
-  `resolve_amount` ganhou o parâmetro `is_variable_price`, e o "preço por
-  kg" derivado (total ÷ peso) é gravado só para referência, nunca usado
-  para recalcular o valor. Itens normais e de peso variável podem ser
-  misturados na mesma Nova Despesa. (Despesas Mensais não ganharam esse
-  modo nesta versão.)
+- **Peso variável (itens comprados por kg ou litro)**: novo interruptor
+  "Peso variável" por produto na Nova Despesa, no modal de Editar Despesa
+  e no novo "Adicionar item" da Árvore de Gastos. Desligado, a despesa
+  funciona normalmente (preço unitário × quantidade). Ligado, o valor
+  digitado é o **total pago** (o rótulo do preço vira "Valor total pago")
+  e deixa de ser multiplicado pela quantidade — resolve o caso de 4
+  laranjas que somaram 740 g por R$ 2,95, que antes viraria 4 × 2,95 =
+  11,80. A quantidade (com o +/- de sempre) continua no lugar em qualquer
+  modo, registrando quantos itens foram; o subtotal já reflete o total
+  exato na hora. Itens normais e de peso variável podem ser misturados na
+  mesma Nova Despesa. (Despesas Mensais não ganharam esse modo.)
+- **Peso ou volume com unidade (kg, g, ml, L)**: campo opcional e
+  independente da quantidade e do interruptor acima — permite anotar, por
+  exemplo, 3 pacotes de arroz de 5 kg, ou 4 laranjas que somaram 740 g. A
+  unidade só acompanha o número digitado (740 g continua sendo 740 g, sem
+  conversão) e nada disso entra em nenhuma conta; sem número, a unidade é
+  descartada. Na Nova Despesa ele ocupa uma linha fina logo abaixo do nome
+  do produto (interruptor, número e unidade clicável), mantendo a linha
+  principal compacta de sempre; o mesmo campo existe no Editar Despesa e
+  no Adicionar item, então também dá para acrescentar ou corrigir o peso de
+  despesas já cadastradas. Na Árvore de Gastos cada detalhe aparece
+  separado: "2 × R$ 4,50", "4 un. · valor total (peso variável)",
+  "740 g", "1,5 L".
+  Backend: novas colunas `is_variable_price`, `measure_value` e
+  `measure_unit` em `expenses` (migração automática; despesas antigas ficam
+  no modo normal e sem peso). `resolve_amount` ganhou o parâmetro
+  `is_variable_price`, e o preço "por item" derivado (total ÷ quantidade) é
+  gravado só para referência, nunca usado para recalcular o valor.
+  `add_expense` e `update_expense` da Api aceitam `is_variable_price`,
+  `measure_value` e `measure_unit` (e cada produto de
+  `add_expenses_structured` também).
 - **Renomear categorias e subcategorias**: ícone de lápis nos cards de
-  categoria e de subcategoria e ao lado do título da lista de despesas.
-  O renome é **global** — vale para todos os meses e também para os
-  templates de Despesa Mensal, já que categoria é só uma etiqueta de
-  texto reaproveitada. Subcategorias são renomeadas dentro da própria
-  categoria (uma "Carnes" em Açougue não afeta uma "Carnes" em
-  Restaurante). Renomear o balde "Sem subcategoria" dá um nome aos itens
-  sem subcategoria; deixar o novo nome vazio remove a subcategoria.
+  categoria e de subcategoria e ao lado do título da lista de despesas. O
+  renome é **global** — vale para todos os meses e também para os
+  templates de Despesa Mensal, já que categoria é só uma etiqueta de texto
+  reaproveitada. Subcategorias são renomeadas dentro da própria categoria
+  (uma "Carnes" em Açougue não afeta uma "Carnes" em Restaurante).
+  Renomear o balde "Sem subcategoria" dá um nome aos itens sem
+  subcategoria; deixar o novo nome vazio remove a subcategoria. Novos
+  métodos `rename_category` e `rename_subcategory` na Api.
 - **Adicionar item direto na categoria/subcategoria**: botão "Adicionar
   item" na lista de despesas da Árvore de Gastos, já com categoria e
   subcategoria preenchidas — não precisa voltar à Nova Despesa e
   redigitar tudo. O item entra com a data/hora de agora, como na Nova
   Despesa (para outra data, use o lápis de editar depois).
 - **Yuan chinês (CNY)** na lista de moedas de exibição.
+
+### Modificado
+- **Testes modularizados em `tests/`**: o `tests.py` único (quase 1.900
+  linhas) foi dividido em 18 módulos por assunto (`test_expenses_crud`,
+  `test_migrations`, `test_variable_price`, `test_measure_units`,
+  `test_config`, `test_api_bridge` etc.), mais `tests/helpers.py`
+  (utilitários compartilhados) e `tests/main.py`, que executa tudo:
+  `python3 tests/main.py` (`-q` para silencioso; nomes de módulo filtram,
+  ex.: `python3 tests/main.py config api`). O `main.py` **descobre os
+  arquivos sozinho** — antes, um teste novo só rodava se a classe fosse
+  registrada à mão numa lista no rodapé do arquivo, e esquecer disso fazia
+  o teste simplesmente não executar. O código de saída é 0 quando tudo
+  passa e 1 quando há falha. Nenhum teste foi perdido ou renomeado na
+  divisão. **Se você atualizar por cima da pasta antiga, apague o
+  `tests.py` da raiz** — a cópia por cima não remove arquivos. A suíte
+  passou de 160 para 192 testes (peso variável, unidades, migrações e
+  renomeação de categorias).
+- **Testes da `Api` não tocam mais nos arquivos reais**: `Api()` abre o
+  `gastos.db` e o `app_config.json` da pasta do projeto, então rodar os
+  testes abria (e migrava) o banco de quem os executava, e ainda deixava
+  pastas temporárias para trás. Agora as classes que herdam de
+  `ApiTestCase` rodam com a pasta base redirecionada para um diretório
+  temporário, apagado no fim de cada teste.
 
 ### Corrigido
 - **Compras da mesma subcategoria em dias diferentes pareciam uma só**:
