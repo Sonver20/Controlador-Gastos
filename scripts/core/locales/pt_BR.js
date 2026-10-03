@@ -177,7 +177,7 @@ CG.locales.pt = {
         'rename_modal.save': 'Renomear',
         'quickadd_modal.title': 'Adicionar item',
         'quickadd_modal.save': 'Adicionar',
-        'register.measure_placeholder': 'Peso ou volume',
+        'register.measure_placeholder': 'Peso',
         'register.measure_unit_title': 'Unidade (kg, g, ml, L)',
         'edit_modal.measure_placeholder': 'Peso ou volume',
         'edit_modal.invalid_measure_warning': 'O peso ou volume, se informado, precisa ser um número maior que zero.',

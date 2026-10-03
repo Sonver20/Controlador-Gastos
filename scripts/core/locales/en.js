@@ -163,7 +163,7 @@ CG.locales.en = {
         'rename_modal.save': 'Rename',
         'quickadd_modal.title': 'Add item',
         'quickadd_modal.save': 'Add',
-        'register.measure_placeholder': 'Weight or volume',
+        'register.measure_placeholder': 'Weight',
         'register.measure_unit_title': 'Unit (kg, g, ml, L)',
         'edit_modal.measure_placeholder': 'Weight or volume',
         'edit_modal.invalid_measure_warning': 'Weight or volume, if provided, must be a number greater than zero.',
