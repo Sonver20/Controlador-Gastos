@@ -459,17 +459,18 @@ CG.tree = (function () {
 
     function stepQuickAddQty(delta) {
         const qtyInput = document.getElementById('quickadd-quantity');
-        let qty = CG.utils.parseLocaleNumber(qtyInput.value);
-        qty = Math.max(0.001, qty + delta);
-        qtyInput.value = CG.utils.formatQuantity(Math.round(qty * 1000) / 1000);
+        qtyInput.value = CG.utils.formatQuantity(CG.utils.adjustQuantity(qtyInput.value, delta));
         updateQuickAddTotal();
     }
 
     function updateQuickAddTotal() {
-        const price = CG.utils.parseLocaleNumber(document.getElementById('quickadd-price').value);
-        const qty = CG.utils.parseLocaleNumber(document.getElementById('quickadd-quantity').value);
         const isVariable = document.getElementById('quickadd-variable-price').checked;
-        document.getElementById('quickadd-total-display').textContent = formatCurrency(isVariable ? price : price * qty);
+        const subtotal = CG.utils.calculateSubtotal(
+            document.getElementById('quickadd-price').value,
+            document.getElementById('quickadd-quantity').value,
+            isVariable
+        );
+        document.getElementById('quickadd-total-display').textContent = formatCurrency(subtotal);
     }
 
     async function submitQuickAdd() {

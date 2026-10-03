@@ -185,6 +185,8 @@ class Database:
                     CREATE TABLE IF NOT EXISTS monthly_groups (
                         id                INTEGER PRIMARY KEY AUTOINCREMENT,
                         name              TEXT    NOT NULL,
+                        category          TEXT    NOT NULL DEFAULT '',
+                        subcategory       TEXT,
                         last_applied_month TEXT
                     )
                     """
@@ -199,6 +201,9 @@ class Database:
                         description TEXT    NOT NULL,
                         quantity    DECIMAL NOT NULL DEFAULT 1,
                         unit_price  DECIMAL NOT NULL,
+                        is_variable_price INTEGER NOT NULL DEFAULT 0,
+                        measure_value DECIMAL,
+                        measure_unit TEXT,
                         FOREIGN KEY (group_id) REFERENCES monthly_groups(id) ON DELETE CASCADE
                     )
                     """
@@ -275,6 +280,8 @@ class Database:
                         CREATE TABLE monthly_groups (
                             id                INTEGER PRIMARY KEY AUTOINCREMENT,
                             name              TEXT    NOT NULL,
+                            category          TEXT    NOT NULL DEFAULT '',
+                            subcategory       TEXT,
                             last_applied_month TEXT
                         )
                         """
@@ -290,13 +297,68 @@ class Database:
                             description TEXT    NOT NULL,
                             quantity    DECIMAL NOT NULL DEFAULT 1,
                             unit_price  DECIMAL NOT NULL,
+                            is_variable_price INTEGER NOT NULL DEFAULT 0,
+                            measure_value DECIMAL,
+                            measure_unit TEXT,
                             FOREIGN KEY (group_id) REFERENCES monthly_groups(id) ON DELETE CASCADE
                         )
                         """
                     )
+
+                monthly_group_columns = self._table_columns(conn, "monthly_groups")
+                if "category" not in monthly_group_columns:
+                    conn.execute("ALTER TABLE monthly_groups ADD COLUMN category TEXT NOT NULL DEFAULT ''")
+                if "subcategory" not in monthly_group_columns:
+                    conn.execute("ALTER TABLE monthly_groups ADD COLUMN subcategory TEXT")
+
+                monthly_item_columns = self._table_columns(conn, "monthly_items")
+                if "is_variable_price" not in monthly_item_columns:
+                    conn.execute(
+                        "ALTER TABLE monthly_items ADD COLUMN is_variable_price INTEGER NOT NULL DEFAULT 0"
+                    )
+                if "measure_value" not in monthly_item_columns:
+                    conn.execute("ALTER TABLE monthly_items ADD COLUMN measure_value DECIMAL")
+                if "measure_unit" not in monthly_item_columns:
+                    conn.execute("ALTER TABLE monthly_items ADD COLUMN measure_unit TEXT")
+
+                self._migrate_monthly_classification(conn)
                 conn.commit()
         except sqlite3.Error as e:
             print(f"[DB MIGRATE] {e}")
+
+    def _migrate_monthly_classification(self, conn: sqlite3.Connection) -> None:
+        """Move legacy item classifications to groups, splitting mixed groups."""
+        legacy_groups = conn.execute(
+            "SELECT id, name, last_applied_month FROM monthly_groups WHERE category = '' ORDER BY id"
+        ).fetchall()
+        for group in legacy_groups:
+            rows = conn.execute(
+                "SELECT id, category, subcategory FROM monthly_items WHERE group_id = ? ORDER BY id",
+                (group["id"],),
+            ).fetchall()
+            items_by_classification: Dict[tuple, List[int]] = {}
+            for row in rows:
+                classification = (row["category"], (row["subcategory"] or "").strip() or None)
+                items_by_classification.setdefault(classification, []).append(row["id"])
+
+            for index, ((category, subcategory), item_ids) in enumerate(items_by_classification.items()):
+                if index == 0:
+                    group_id = group["id"]
+                    conn.execute(
+                        "UPDATE monthly_groups SET category = ?, subcategory = ? WHERE id = ?",
+                        (category, subcategory, group_id),
+                    )
+                else:
+                    cursor = conn.execute(
+                        "INSERT INTO monthly_groups (name, category, subcategory, last_applied_month) "
+                        "VALUES (?, ?, ?, ?)",
+                        (group["name"], category, subcategory, group["last_applied_month"]),
+                    )
+                    group_id = cursor.lastrowid
+                    conn.executemany(
+                        "UPDATE monthly_items SET group_id = ? WHERE id = ?",
+                        [(group_id, item_id) for item_id in item_ids],
+                    )
 
     def _migrate_amount_columns_to_decimal(self, conn: sqlite3.Connection) -> None:
         """
@@ -394,6 +456,17 @@ class Database:
     # ------------------------------------------------------------------
     # Expenses: CRUD bruto (recebe valores já prontos; não calcula nada)
     # ------------------------------------------------------------------
+    @staticmethod
+    def _insert_expense_row(conn: sqlite3.Connection, row: Dict[str, Any]) -> int:
+        cursor = conn.execute(
+            "INSERT INTO expenses (category, subcategory, description, amount, quantity, unit_price, "
+            "is_variable_price, measure_value, measure_unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (row["category"], row.get("subcategory"), row["description"], row["amount"],
+             row["quantity"], row["unit_price"], int(bool(row.get("is_variable_price", False))),
+             row.get("measure_value"), row.get("measure_unit")),
+        )
+        return cursor.lastrowid
+
     def insert_expense(
         self,
         category: str,
@@ -419,14 +492,18 @@ class Database:
         usado em nenhum cálculo."""
         try:
             with self._connection() as conn:
-                cursor = conn.execute(
-                    "INSERT INTO expenses (category, subcategory, description, amount, quantity, unit_price, is_variable_price, measure_value, measure_unit) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (category, subcategory, description, amount, quantity, unit_price, int(bool(is_variable_price)),
-                     measure_value, measure_unit),
-                )
+                last_id = self._insert_expense_row(conn, {
+                    "category": category,
+                    "subcategory": subcategory,
+                    "description": description,
+                    "amount": amount,
+                    "quantity": quantity,
+                    "unit_price": unit_price,
+                    "is_variable_price": is_variable_price,
+                    "measure_value": measure_value,
+                    "measure_unit": measure_unit,
+                })
                 conn.commit()
-                last_id = cursor.lastrowid
             return {"success": True, "id": last_id, "message": "Despesa registrada com sucesso!", "key": "expense.add.success"}
         except sqlite3.Error as e:
             return {"success": False, "id": None, "message": f"Erro ao salvar: {e}", "key": "expense.add.error", "params": {"error": str(e)}}
@@ -444,13 +521,7 @@ class Database:
             ids = []
             with self._connection() as conn:
                 for r in rows:
-                    cursor = conn.execute(
-                        "INSERT INTO expenses (category, subcategory, description, amount, quantity, unit_price, is_variable_price, measure_value, measure_unit) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        (r["category"], r.get("subcategory"), r["description"], r["amount"], r["quantity"], r["unit_price"],
-                         int(bool(r.get("is_variable_price", False))), r.get("measure_value"), r.get("measure_unit")),
-                    )
-                    ids.append(cursor.lastrowid)
+                    ids.append(self._insert_expense_row(conn, r))
                 conn.commit()
             return {"success": True, "ids": ids}
         except sqlite3.Error as e:
@@ -656,6 +727,7 @@ class Database:
             with self._connection() as conn:
                 conn.execute("UPDATE expenses SET category = ? WHERE category = ?", (new_category, old_category))
                 conn.execute("UPDATE monthly_items SET category = ? WHERE category = ?", (new_category, old_category))
+                conn.execute("UPDATE monthly_groups SET category = ? WHERE category = ?", (new_category, old_category))
                 conn.commit()
             return {"success": True, "message": "Categoria renomeada.", "key": "tree.category_renamed"}
         except sqlite3.Error as e:
@@ -683,6 +755,10 @@ class Database:
                         "UPDATE monthly_items SET subcategory = ? WHERE category = ? AND (subcategory IS NULL OR subcategory = '')",
                         (new_value, category),
                     )
+                    conn.execute(
+                        "UPDATE monthly_groups SET subcategory = ? WHERE category = ? AND (subcategory IS NULL OR subcategory = '')",
+                        (new_value, category),
+                    )
                 else:
                     conn.execute(
                         "UPDATE expenses SET subcategory = ? WHERE category = ? AND subcategory = ?",
@@ -690,6 +766,10 @@ class Database:
                     )
                     conn.execute(
                         "UPDATE monthly_items SET subcategory = ? WHERE category = ? AND subcategory = ?",
+                        (new_value, category, old_subcategory),
+                    )
+                    conn.execute(
+                        "UPDATE monthly_groups SET subcategory = ? WHERE category = ? AND subcategory = ?",
                         (new_value, category, old_subcategory),
                     )
                 conn.commit()
@@ -700,37 +780,47 @@ class Database:
     # ------------------------------------------------------------------
     # Despesas Mensais: CRUD de grupos e itens (templates recorrentes)
     # ------------------------------------------------------------------
-    def insert_monthly_group(self, name: str, items: List[Dict[str, Any]]) -> int:
+    def insert_monthly_group(self, name: str, category: str, subcategory: Optional[str],
+                             items: List[Dict[str, Any]]) -> int:
         """
-        Insere um grupo e seus itens na MESMA transação (atômico). Cada
-        item de `items` já chega pronto: category/subcategory/description/
-        quantity/unit_price/amount. Retorna o id do grupo criado.
+        Insere um grupo classificado e seus itens na MESMA transação.
         """
         with self._connection() as conn:
-            cursor = conn.execute("INSERT INTO monthly_groups (name) VALUES (?)", (name,))
+            cursor = conn.execute(
+                "INSERT INTO monthly_groups (name, category, subcategory) VALUES (?, ?, ?)",
+                (name, category, subcategory),
+            )
             group_id = cursor.lastrowid
             for it in items:
                 conn.execute(
-                    "INSERT INTO monthly_items (group_id, category, subcategory, description, quantity, unit_price) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
-                    (group_id, it["category"], it.get("subcategory"), it["description"],
-                     it["quantity"], it["unit_price"]),
+                    "INSERT INTO monthly_items "
+                    "(group_id, category, subcategory, description, quantity, unit_price, "
+                    "is_variable_price, measure_value, measure_unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (group_id, category, subcategory, it["description"], it["quantity"],
+                     it["unit_price"], int(bool(it.get("is_variable_price", False))),
+                     it.get("measure_value"), it.get("measure_unit")),
                 )
             conn.commit()
             return group_id
 
-    def update_monthly_group(self, group_id: int, name: str, items: List[Dict[str, Any]]) -> None:
+    def update_monthly_group(self, group_id: int, name: str, category: str,
+                             subcategory: Optional[str], items: List[Dict[str, Any]]) -> None:
         """Atualiza nome e SUBSTITUI todos os itens do grupo (na mesma
         transação). Não toca em last_applied_month."""
         with self._connection() as conn:
-            conn.execute("UPDATE monthly_groups SET name = ? WHERE id = ?", (name, group_id))
+            conn.execute(
+                "UPDATE monthly_groups SET name = ?, category = ?, subcategory = ? WHERE id = ?",
+                (name, category, subcategory, group_id),
+            )
             conn.execute("DELETE FROM monthly_items WHERE group_id = ?", (group_id,))
             for it in items:
                 conn.execute(
-                    "INSERT INTO monthly_items (group_id, category, subcategory, description, quantity, unit_price) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
-                    (group_id, it["category"], it.get("subcategory"), it["description"],
-                     it["quantity"], it["unit_price"]),
+                    "INSERT INTO monthly_items "
+                    "(group_id, category, subcategory, description, quantity, unit_price, "
+                    "is_variable_price, measure_value, measure_unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (group_id, category, subcategory, it["description"], it["quantity"],
+                     it["unit_price"], int(bool(it.get("is_variable_price", False))),
+                     it.get("measure_value"), it.get("measure_unit")),
                 )
             conn.commit()
 
@@ -747,10 +837,12 @@ class Database:
         já convertidos para Decimal pelo detect_types)."""
         with self._connection() as conn:
             group_rows = conn.execute(
-                "SELECT id, name, last_applied_month FROM monthly_groups ORDER BY name"
+                "SELECT id, name, category, subcategory, last_applied_month "
+                "FROM monthly_groups ORDER BY name, id"
             ).fetchall()
             item_rows = conn.execute(
-                "SELECT id, group_id, category, subcategory, description, quantity, unit_price "
+                "SELECT id, group_id, description, quantity, unit_price, is_variable_price, "
+                "measure_value, measure_unit "
                 "FROM monthly_items ORDER BY id"
             ).fetchall()
 
@@ -762,6 +854,8 @@ class Database:
             {
                 "id": g["id"],
                 "name": g["name"],
+                "category": g["category"],
+                "subcategory": g["subcategory"],
                 "last_applied_month": g["last_applied_month"],
                 "items": items_by_group.get(g["id"], []),
             }

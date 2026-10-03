@@ -162,7 +162,10 @@ CG.datepicker = (function () {
         if (!input) return;
         input.readOnly = true;
         input.classList.add('cursor-pointer');
-        input.addEventListener('click', () => open(inputId));
+        input.addEventListener('click', (event) => {
+            event.stopPropagation();
+            open(inputId);
+        });
     }
 
     /** Define o valor (ISO "YYYY-MM-DD", ou '' para limpar). */

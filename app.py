@@ -186,10 +186,26 @@ class Api:
         return self.monthly.list_groups()
 
     @jsonify_result
-    def save_monthly_group(self, name: str, items: list, group_id=None):
+    def save_monthly_group(self, name: str, items: list, group_id=None,
+                           category=None, subcategory=None):
+        if not category:
+            legacy_classifications = {
+                (str(item.get("category") or "").strip(),
+                 str(item.get("subcategory") or "").strip() or None)
+                for item in items
+            }
+            if len(legacy_classifications) != 1 or not next(iter(legacy_classifications))[0]:
+                return {"success": False, "message": "Informe uma categoria para a despesa mensal.",
+                        "key": "monthly.category_required"}
+            category, subcategory = next(iter(legacy_classifications))
+
+        products = [
+            {key: value for key, value in item.items() if key not in ("category", "subcategory")}
+            for item in items
+        ]
         if group_id is not None:
-            return self.monthly.update_group(int(group_id), name, items)
-        return self.monthly.create_group(name, items)
+            return self.monthly.update_group(int(group_id), name, category, subcategory, products)
+        return self.monthly.create_group(name, category, subcategory, products)
 
     @jsonify_result
     def delete_monthly_group(self, group_id: int):

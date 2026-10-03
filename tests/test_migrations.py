@@ -203,3 +203,77 @@ class TestMeasureMigrationFromWeightKg(unittest.TestCase):
         Database(db_path=self.path)
         db = Database(db_path=self.path)  # abrir de novo não pode quebrar nem duplicar
         self.assertEqual(db.get_expense(1)["data"]["measure_unit"], "kg")
+
+
+class TestMonthlyClassificationMigration(unittest.TestCase):
+    """Templates mistos são separados preservando classificação e recorrência."""
+
+    def setUp(self):
+        fd, self.path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        with sqlite3.connect(self.path) as conn:
+            conn.execute(
+                """CREATE TABLE monthly_groups (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    last_applied_month TEXT
+                )"""
+            )
+            conn.execute(
+                """CREATE TABLE monthly_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    group_id INTEGER NOT NULL,
+                    category TEXT NOT NULL,
+                    subcategory TEXT,
+                    description TEXT NOT NULL,
+                    quantity DECIMAL NOT NULL DEFAULT 1,
+                    unit_price DECIMAL NOT NULL,
+                    FOREIGN KEY (group_id) REFERENCES monthly_groups(id) ON DELETE CASCADE
+                )"""
+            )
+            conn.execute(
+                "INSERT INTO monthly_groups (name, last_applied_month) VALUES (?, ?)",
+                ("Contas da casa", "2026-09"),
+            )
+            conn.executemany(
+                """INSERT INTO monthly_items
+                    (group_id, category, subcategory, description, quantity, unit_price)
+                    VALUES (1, ?, ?, ?, 1, ?)""",
+                [
+                    ("Moradia", "Aluguel", "Aluguel", "800.00"),
+                    ("Moradia", "Aluguel", "Condomínio", "250.00"),
+                    ("Energia", "Luz", "Conta de luz", "120.00"),
+                ],
+            )
+
+    def tearDown(self):
+        if os.path.exists(self.path):
+            os.unlink(self.path)
+
+    def test_mixed_group_is_split_and_migration_is_idempotent(self):
+        db = Database(db_path=self.path)
+        groups = db.get_monthly_groups()
+
+        self.assertEqual(len(groups), 2)
+        self.assertEqual({group["name"] for group in groups}, {"Contas da casa"})
+        self.assertEqual(
+            {group["last_applied_month"] for group in groups}, {"2026-09"}
+        )
+        self.assertEqual(
+            {(group["category"], group["subcategory"]) for group in groups},
+            {("Moradia", "Aluguel"), ("Energia", "Luz")},
+        )
+        self.assertEqual(
+            {item["description"] for group in groups for item in group["items"]},
+            {"Aluguel", "Condomínio", "Conta de luz"},
+        )
+
+        Database(db_path=self.path)
+        migrated_again = Database(db_path=self.path).get_monthly_groups()
+        self.assertEqual(len(migrated_again), 2)
+        self.assertEqual(sum(len(group["items"]) for group in migrated_again), 3)
+        with sqlite3.connect(self.path) as conn:
+            group_columns = {row[1] for row in conn.execute("PRAGMA table_info(monthly_groups)")}
+            item_columns = {row[1] for row in conn.execute("PRAGMA table_info(monthly_items)")}
+        self.assertTrue({"category", "subcategory"}.issubset(group_columns))
+        self.assertTrue({"is_variable_price", "measure_value", "measure_unit"}.issubset(item_columns))

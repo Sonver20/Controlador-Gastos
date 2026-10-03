@@ -124,10 +124,7 @@ CG.register = (function () {
         const row = document.getElementById('reg-products-list').querySelector(`[data-row-id="${rowId}"]`);
         if (!row) return;
         const qtyInput = row.querySelector('.product-qty');
-        let qty = CG.utils.parseLocaleNumber(qtyInput.value);
-        qty = Math.max(0.001, qty + delta);
-        // Arredonda para evitar sobra de ponto flutuante (ex: 1.9999999999)
-        qtyInput.value = CG.utils.formatQuantity(Math.round(qty * 1000) / 1000);
+        qtyInput.value = CG.utils.formatQuantity(CG.utils.adjustQuantity(qtyInput.value, delta));
         updateProductsGrandTotal();
     }
 
@@ -156,11 +153,12 @@ CG.register = (function () {
         const rows = document.querySelectorAll('#reg-products-list .product-row');
         let grandTotal = 0;
         rows.forEach(row => {
-            const price = CG.utils.parseLocaleNumber(row.querySelector('.product-price').value);
             const isVariable = row.querySelector('.product-variable-toggle').checked;
-            const qty = CG.utils.parseLocaleNumber(row.querySelector('.product-qty').value);
-            // Peso variável: o preço digitado JÁ é o total -- não multiplica.
-            const subtotal = isVariable ? price : price * qty;
+            const subtotal = CG.utils.calculateSubtotal(
+                row.querySelector('.product-price').value,
+                row.querySelector('.product-qty').value,
+                isVariable
+            );
             row.querySelector('.product-subtotal').textContent = formatCurrency(subtotal);
             grandTotal += subtotal;
         });

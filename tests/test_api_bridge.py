@@ -71,6 +71,27 @@ class TestApiBridge(ApiTestCase):
         self.assertTrue(res["success"])
         self.assertEqual(res["data"], ["A", "B"])
 
+    def test_api_save_monthly_group_with_shared_classification(self):
+        result = self.api.save_monthly_group(
+            "Contas", [{"description": "Internet", "unit_price": "80.00", "quantity": "1"}],
+            None, "Moradia", "Serviços",
+        )
+        self.assertTrue(result["success"])
+        group = self.api.get_monthly_groups()["data"][0]
+        self.assertEqual((group["category"], group["subcategory"]), ("Moradia", "Serviços"))
+        self.assertNotIn("category", group["items"][0])
+
+    def test_api_save_monthly_group_accepts_legacy_consistent_classification(self):
+        result = self.api.save_monthly_group(
+            "Conta antiga", [{
+                "category": "Moradia", "subcategory": "Serviços", "description": "Internet",
+                "unit_price": "80.00", "quantity": "1",
+            }],
+        )
+        self.assertTrue(result["success"])
+        group = self.api.get_monthly_groups()["data"][0]
+        self.assertEqual((group["category"], group["subcategory"]), ("Moradia", "Serviços"))
+
     def test_api_drill_down_flow(self):
         """Testa o fluxo completo de drill-down."""
         self.api.add_expense("Alimentacao", "Mercado", 200.0)

@@ -3,6 +3,7 @@
 venv/
 ENV/
 
+.vscode
 gastos.db
 app_config.json
 anotacoes.txt

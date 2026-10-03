@@ -52,6 +52,16 @@ CG.utils = (function () {
         return parseFloat(str.trim().replace(',', '.')) || 0;
     }
 
+    function adjustQuantity(value, delta) {
+        const quantity = Math.max(0.001, parseLocaleNumber(value) + delta);
+        return Math.round(quantity * 1000) / 1000;
+    }
+
+    function calculateSubtotal(price, quantity, isVariablePrice = false) {
+        const parsedPrice = parseLocaleNumber(price);
+        return isVariablePrice ? parsedPrice : parsedPrice * parseLocaleNumber(quantity);
+    }
+
     function formatMonth(yyyymm) {
         const [year, month] = yyyymm.split('-');
         const date = new Date(year, month - 1, 1);
@@ -105,6 +115,8 @@ CG.utils = (function () {
         formatQuantity,
         formatPrice,
         parseLocaleNumber,
+        adjustQuantity,
+        calculateSubtotal,
         formatMonth,
         formatDateTime,
         formatTime,

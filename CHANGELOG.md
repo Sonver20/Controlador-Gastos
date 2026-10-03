@@ -6,6 +6,34 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/)
 (`MAJOR.MINOR.PATCH`) a partir da versão 2.0.0.
 
+## [3.4.0] - 2026-10-03
+
+### Adicionado
+- **Produtos em Despesas Mensais**: o cadastro agora segue o padrão de
+  Nova Despesa, com categoria e subcategoria compartilhadas pelo grupo e
+  uma lista de produtos. O nome da despesa mensal continua independente
+  da classificação.
+- **Peso/volume e preço variável em Despesas Mensais**: cada produto pode
+  registrar uma medida opcional (kg, g, ml ou L) e usar preço variável.
+  Nesse modo, o preço informado já é o total pago e não é multiplicado
+  pela quantidade.
+
+### Modificado
+- **Migração de templates mensais existentes**: grupos antigos com mais
+  de uma classificação são divididos por categoria/subcategoria. Nome,
+  produtos e mês da última aplicação são preservados; despesas já
+  lançadas continuam intactas. A ponte também aceita payloads antigos
+  quando todos os produtos compartilham a mesma classificação.
+- **Lógica compartilhada**: stepper de quantidade e cálculo de subtotais
+  passaram a usar funções utilitárias comuns. A inserção individual e em
+  lote reutiliza o mesmo comando SQL, mantendo a transação atômica do lote.
+
+### Corrigido
+- **Edição da próxima data de recebimento**: o calendário fechava
+  imediatamente ao clicar no campo porque o evento também chegava ao
+  listener global de clique fora. O campo agora mantém o calendário
+  aberto, e cliques fora continuam fechando-o.
+
 ## [3.3.0] - 2026-09-29
 
 ### Adicionado

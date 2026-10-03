@@ -32,13 +32,13 @@ class TestCategoryRename(unittest.TestCase):
         self.assertEqual(self.db.get_all_categories()["data"], ["Farmacia", "Supermercado"])
 
     def test_rename_category_updates_monthly_items_too(self):
-        self.db.insert_monthly_group("Contas", [
-            {"category": "Mercado", "subcategory": None, "description": "Feira do mes",
-             "quantity": Decimal("1"), "unit_price": Decimal("300.00")},
+        self.db.insert_monthly_group("Contas", "Mercado", None, [
+            {"description": "Feira do mes", "quantity": Decimal("1"),
+             "unit_price": Decimal("300.00")},
         ])
         self.finance.rename_category("Mercado", "Supermercado")
         groups = self.db.get_monthly_groups()
-        self.assertEqual(groups[0]["items"][0]["category"], "Supermercado")
+        self.assertEqual(groups[0]["category"], "Supermercado")
 
     def test_rename_category_empty_new_name_rejected(self):
         self.finance.add_expense("Mercado", "Item", "10.00")

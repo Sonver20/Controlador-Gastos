@@ -1,9 +1,8 @@
 /**
  * scripts/features/monthly.js - Despesas Mensais.
  *
- * Templates de despesas recorrentes: cada grupo tem um nome e uma lista
- * de itens, onde CADA ITEM tem sua própria categoria/subcategoria (diferente
- * da Nova Despesa, que compartilha uma categoria para todos os produtos).
+ * Templates de despesas recorrentes: cada grupo tem nome e classificação
+ * compartilhada pelos produtos, como no cadastro de Nova Despesa.
  *
  * Todo mês, ao abrir o app, os grupos são aplicados automaticamente: os
  * itens viram despesas no banco de dados e o total é debitado do saldo.
@@ -49,11 +48,11 @@ CG.monthly = (function () {
                     <div class="flex items-center justify-between gap-3 py-1.5 text-sm">
                         <div class="min-w-0">
                             <span class="font-medium">${escapeHtml(item.description)}</span>
-                            <span class="text-xs text-slate-400 ml-1">(${escapeHtml(item.category)}${item.subcategory ? ' > ' + escapeHtml(item.subcategory) : ''})</span>
+                            ${item.is_variable_price && item.measure_value ? `<span class="text-xs text-slate-400 ml-1">(${formatQuantity(item.measure_value)} ${escapeHtml(item.measure_unit || '')})</span>` : ''}
                         </div>
                         <div class="text-right shrink-0">
                             <span class="font-semibold">${formatCurrency(item.amount)}</span>
-                            ${Number(item.quantity) !== 1 ? `<span class="text-xs text-slate-400 block">${formatQuantity(item.quantity)} × ${formatCurrency(item.unit_price)}</span>` : ''}
+                            ${Number(item.quantity) !== 1 && !item.is_variable_price ? `<span class="text-xs text-slate-400 block">${formatQuantity(item.quantity)} × ${formatCurrency(item.unit_price)}</span>` : ''}
                         </div>
                     </div>
                 `).join('');
@@ -62,6 +61,7 @@ CG.monthly = (function () {
                     <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
                         <div class="min-w-0">
                             <h4 class="font-bold truncate">${escapeHtml(group.name)}</h4>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 truncate">${escapeHtml(group.category)}${group.subcategory ? ' > ' + escapeHtml(group.subcategory) : ''}</p>
                             <p class="text-xs text-slate-400">${CG.i18n.t('monthly.items_count', { count: group.items.length })}</p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
@@ -106,6 +106,8 @@ CG.monthly = (function () {
         document.getElementById('monthly-form-view').classList.remove('hidden');
 
         document.getElementById('monthly-group-name').value = '';
+        document.getElementById('monthly-category').value = '';
+        document.getElementById('monthly-subcategory').value = '';
         document.getElementById('monthly-items-list').innerHTML = '';
         document.getElementById('monthly-form-title').textContent = groupId ? CG.i18n.t('monthly.form_edit_title') : CG.i18n.t('monthly.form_new_title');
         addItemRow();
@@ -117,6 +119,8 @@ CG.monthly = (function () {
                 const group = res.data.find(g => g.id === groupId);
                 if (!group) return;
                 document.getElementById('monthly-group-name').value = group.name;
+                document.getElementById('monthly-category').value = group.category || '';
+                document.getElementById('monthly-subcategory').value = group.subcategory || '';
                 document.getElementById('monthly-items-list').innerHTML = '';
                 group.items.forEach(item => {
                     addItemRow(item);
@@ -132,38 +136,42 @@ CG.monthly = (function () {
         renderList();
     }
 
-    /**
-     * Adiciona uma linha de item. Cada item tem CATEGORIA PRÓPRIA
-     * (é o que diferencia Despesas Mensais da Nova Despesa).
-     * `preset` opcional: {category, subcategory, description, unit_price, quantity}.
-     */
+    /** `preset` opcional: {description, unit_price, quantity, is_variable_price, measure_value, measure_unit}. */
     function addItemRow(preset = null) {
         const list = document.getElementById('monthly-items-list');
         const rowId = `mrow-${++itemRowCounter}`;
         const row = document.createElement('div');
-        row.className = 'monthly-item-row bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700 space-y-3';
+        row.className = 'monthly-item-row flex flex-col gap-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700';
         row.dataset.rowId = rowId;
+        const inputCls = 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm';
+        const unitOptions = ['kg', 'g', 'ml', 'L'].map(unit => `<option value="${unit}">${unit}</option>`).join('');
         row.innerHTML = `
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input type="text" class="mi-category px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm" list="category-list"
-                    placeholder="${CG.i18n.t('monthly.item_category_placeholder')}" oninput="CG.monthly.updateFormTotal()">
-                <input type="text" class="mi-subcategory px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm" list="subcategory-list"
-                    placeholder="${CG.i18n.t('monthly.item_subcategory_placeholder')}" oninput="CG.monthly.updateFormTotal()">
-            </div>
-            <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-                <input type="text" class="mi-name flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
+            <span class="mi-subtotal self-start text-sm font-semibold text-slate-600 dark:text-slate-300 leading-none">${formatCurrency(0)}</span>
+            <div class="flex flex-wrap items-center gap-x-1.5 gap-y-2">
+                <input type="text" class="mi-name flex-1 min-w-[6.5rem] px-3 py-2 rounded-lg ${inputCls}"
                     placeholder="${CG.i18n.t('monthly.item_name_placeholder')}" oninput="CG.monthly.updateFormTotal()">
-                <input type="text" inputmode="decimal" class="mi-price w-full sm:w-28 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
+                <input type="text" inputmode="decimal" class="mi-price w-24 px-2.5 py-2 rounded-lg ${inputCls}"
                     placeholder="${CG.i18n.t('monthly.item_price_placeholder')}" oninput="CG.monthly.updateFormTotal()">
-                <div class="flex items-center gap-2 justify-center">
+                <div class="flex items-center gap-1">
                     <button type="button" onclick="CG.monthly.stepItemQty('${rowId}', -1)"
-                        class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
-                    <input type="text" inputmode="decimal" class="mi-qty w-16 text-center px-2 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
+                        class="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">-</button>
+                    <input type="text" inputmode="decimal" class="mi-qty w-12 text-center px-1 py-2 rounded-lg ${inputCls}"
                         value="1" oninput="CG.monthly.updateFormTotal()">
                     <button type="button" onclick="CG.monthly.stepItemQty('${rowId}', 1)"
-                        class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">+</button>
+                        class="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition font-bold">+</button>
                 </div>
-                <span class="mi-subtotal text-sm font-semibold text-slate-600 dark:text-slate-300 w-24 text-right shrink-0">${formatCurrency(0)}</span>
+                <div class="flex items-center gap-1.5">
+                    <label class="flex items-center shrink-0 cursor-pointer select-none" title="${CG.i18n.t('register.variable_price_hint')}">
+                        <span class="relative inline-block w-8 h-[18px] shrink-0">
+                            <input type="checkbox" class="mi-variable-toggle peer sr-only" onchange="CG.monthly.toggleVariablePrice('${rowId}')">
+                            <span class="absolute inset-0 bg-slate-300 dark:bg-slate-600 rounded-full peer-checked:bg-primary-600 transition-colors pointer-events-none"></span>
+                            <span class="absolute left-0.5 top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-3.5 pointer-events-none"></span>
+                        </span>
+                    </label>
+                    <input type="text" inputmode="decimal" class="mi-measure w-14 px-2 py-2 rounded-lg ${inputCls}"
+                        placeholder="${CG.i18n.t('register.measure_placeholder')}">
+                    <select class="mi-measure-unit select-compact px-2 py-2 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 outline-none transition text-sm cursor-pointer" title="${CG.i18n.t('register.measure_unit_title')}">${unitOptions}</select>
+                </div>
                 <button type="button" onclick="CG.monthly.removeItemRow('${rowId}')"
                     class="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 shrink-0" title="${CG.i18n.t('monthly.remove_item_title')}">
                     <i class="ph ph-trash text-lg"></i>
@@ -173,11 +181,13 @@ CG.monthly = (function () {
         list.appendChild(row);
 
         if (preset) {
-            row.querySelector('.mi-category').value = preset.category || '';
-            row.querySelector('.mi-subcategory').value = preset.subcategory || '';
             row.querySelector('.mi-name').value = preset.description || '';
             row.querySelector('.mi-price').value = preset.unit_price ? CG.utils.formatPrice(preset.unit_price) : '';
             row.querySelector('.mi-qty').value = CG.utils.formatQuantity(preset.quantity || 1);
+            row.querySelector('.mi-variable-toggle').checked = Boolean(preset.is_variable_price);
+            row.querySelector('.mi-measure').value = preset.measure_value ? CG.utils.formatQuantity(preset.measure_value) : '';
+            row.querySelector('.mi-measure-unit').value = preset.measure_unit || 'kg';
+            toggleVariablePrice(rowId);
         }
         updateFormTotal();
     }
@@ -194,9 +204,17 @@ CG.monthly = (function () {
         const row = document.getElementById('monthly-items-list').querySelector(`[data-row-id="${rowId}"]`);
         if (!row) return;
         const qtyInput = row.querySelector('.mi-qty');
-        let qty = CG.utils.parseLocaleNumber(qtyInput.value);
-        qty = Math.max(0.001, qty + delta);
-        qtyInput.value = CG.utils.formatQuantity(Math.round(qty * 1000) / 1000);
+        qtyInput.value = CG.utils.formatQuantity(CG.utils.adjustQuantity(qtyInput.value, delta));
+        updateFormTotal();
+    }
+
+    function toggleVariablePrice(rowId) {
+        const row = document.getElementById('monthly-items-list').querySelector(`[data-row-id="${rowId}"]`);
+        if (!row) return;
+        const checked = row.querySelector('.mi-variable-toggle').checked;
+        row.querySelector('.mi-price').placeholder = checked
+            ? CG.i18n.t('register.total_paid_placeholder')
+            : CG.i18n.t('monthly.item_price_placeholder');
         updateFormTotal();
     }
 
@@ -204,9 +222,11 @@ CG.monthly = (function () {
         const rows = document.querySelectorAll('#monthly-items-list .monthly-item-row');
         let grandTotal = 0;
         rows.forEach(row => {
-            const price = CG.utils.parseLocaleNumber(row.querySelector('.mi-price').value);
-            const qty = CG.utils.parseLocaleNumber(row.querySelector('.mi-qty').value);
-            const subtotal = price * qty;
+            const subtotal = CG.utils.calculateSubtotal(
+                row.querySelector('.mi-price').value,
+                row.querySelector('.mi-qty').value,
+                row.querySelector('.mi-variable-toggle').checked
+            );
             row.querySelector('.mi-subtotal').textContent = formatCurrency(subtotal);
             grandTotal += subtotal;
         });
@@ -215,8 +235,14 @@ CG.monthly = (function () {
 
     async function submitForm() {
         const name = document.getElementById('monthly-group-name').value.trim();
+        const category = document.getElementById('monthly-category').value.trim();
+        const subcategory = document.getElementById('monthly-subcategory').value.trim();
         if (!name) {
             CG.toast.show(CG.i18n.t('monthly.name_required'), 'warning');
+            return;
+        }
+        if (!category) {
+            CG.toast.show(CG.i18n.t('monthly.category_required'), 'warning');
             return;
         }
 
@@ -225,27 +251,33 @@ CG.monthly = (function () {
         let hasInvalidRow = false;
 
         rows.forEach(row => {
-            const category = row.querySelector('.mi-category').value.trim();
-            const subcategory = row.querySelector('.mi-subcategory').value.trim();
             const description = row.querySelector('.mi-name').value.trim();
             const priceStr = row.querySelector('.mi-price').value.trim().replace(',', '.');
             const qtyStr = row.querySelector('.mi-qty').value.trim().replace(',', '.');
+            const measureStr = row.querySelector('.mi-measure').value.trim().replace(',', '.');
+            const measureUnit = row.querySelector('.mi-measure-unit').value;
+            const isVariable = row.querySelector('.mi-variable-toggle').checked;
 
             // Linha totalmente vazia (clicou em "+" e não usou) -- ignora
-            if (!category && !description && !priceStr) return;
+            if (!description && !priceStr) return;
 
             const price = parseFloat(priceStr);
             const qty = parseFloat(qtyStr);
-            if (!category || !description || !priceStr || isNaN(price) || price <= 0 || !qtyStr || isNaN(qty) || qty <= 0) {
+            if (!description || !priceStr || isNaN(price) || price <= 0 || !qtyStr || isNaN(qty) || qty <= 0) {
+                hasInvalidRow = true;
+                return;
+            }
+            if (measureStr && (isNaN(parseFloat(measureStr)) || parseFloat(measureStr) <= 0)) {
                 hasInvalidRow = true;
                 return;
             }
             items.push({
-                category,
-                subcategory: subcategory || null,
                 description,
                 unit_price: priceStr,
                 quantity: qtyStr,
+                is_variable_price: isVariable,
+                measure_value: measureStr || null,
+                measure_unit: measureStr ? measureUnit : null,
             });
         });
 
@@ -259,7 +291,10 @@ CG.monthly = (function () {
         }
 
         try {
-            const res = await CG.api.call('save_monthly_group', name, items, CG.state.editingMonthlyGroupId);
+            const res = await CG.api.call(
+                'save_monthly_group', name, items, CG.state.editingMonthlyGroupId,
+                category, subcategory || null
+            );
             if (res.success) {
                 CG.i18n.showApiResult(res, 'success');
                 CG.register.loadCategoryList();
@@ -336,6 +371,7 @@ CG.monthly = (function () {
         addItemRow,
         removeItemRow,
         stepItemQty,
+        toggleVariablePrice,
         updateFormTotal,
         submitForm,
         deleteGroup,

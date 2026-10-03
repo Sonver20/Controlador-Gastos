@@ -56,9 +56,7 @@ CG.modals = (function () {
 
     function stepEditQty(delta) {
         const qtyInput = document.getElementById('edit-quantity');
-        let qty = CG.utils.parseLocaleNumber(qtyInput.value);
-        qty = Math.max(0.001, qty + delta);
-        qtyInput.value = CG.utils.formatQuantity(Math.round(qty * 1000) / 1000);
+        qtyInput.value = CG.utils.formatQuantity(CG.utils.adjustQuantity(qtyInput.value, delta));
         updateEditTotal();
     }
 
@@ -82,10 +80,12 @@ CG.modals = (function () {
     }
 
     function updateEditTotal() {
-        const price = CG.utils.parseLocaleNumber(document.getElementById('edit-unit-price').value);
-        const qty = CG.utils.parseLocaleNumber(document.getElementById('edit-quantity').value);
         const isVariable = document.getElementById('edit-variable-price').checked;
-        const total = isVariable ? price : price * qty;
+        const total = CG.utils.calculateSubtotal(
+            document.getElementById('edit-unit-price').value,
+            document.getElementById('edit-quantity').value,
+            isVariable
+        );
         document.getElementById('edit-total-display').textContent = formatCurrency(total);
     }
 

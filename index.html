@@ -244,7 +244,7 @@
                     <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-5">
                         <div class="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl p-4 text-sm text-violet-800 dark:text-violet-300">
                             <p class="font-medium mb-1"><i class="ph ph-info mr-1"></i> <span data-i18n="monthly.how_it_works_title">Como funciona</span></p>
-                            <p class="text-xs opacity-80" data-i18n="monthly.how_it_works_desc">Cada item pode ter uma <strong>categoria diferente</strong>. Todo mês, ao abrir o app, todos os itens são lançados como despesas e o total é debitado do seu saldo automaticamente.</p>
+                            <p class="text-xs opacity-80" data-i18n="monthly.how_it_works_desc">Todos os produtos compartilham a categoria e a subcategoria desta despesa mensal. Todo mês, os produtos são lançados e o total é debitado do saldo automaticamente.</p>
                         </div>
 
                         <div>
@@ -254,9 +254,24 @@
                                 placeholder='Ex: Contas da casa, Assinaturas, Mercado do mês' data-i18n-placeholder="monthly.name_placeholder">
                         </div>
 
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="monthly.category_label">Categoria</label>
+                                <input type="text" id="monthly-category" list="category-list"
+                                    class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                                    placeholder="Categoria" data-i18n-placeholder="monthly.category_placeholder">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300" data-i18n="monthly.subcategory_label">Subcategoria (opcional)</label>
+                                <input type="text" id="monthly-subcategory" list="subcategory-list"
+                                    class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                                    placeholder="Subcategoria (opcional)" data-i18n-placeholder="monthly.subcategory_placeholder">
+                            </div>
+                        </div>
+
                         <div>
                             <div class="flex items-center justify-between mb-2">
-                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" data-i18n="monthly.items_label">Itens (cada um com sua categoria)</label>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300" data-i18n="monthly.items_label">Produtos</label>
                                 <button type="button" onclick="CG.monthly.addItemRow()"
                                     class="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 font-medium">
                                     <i class="ph ph-plus-circle"></i> <span data-i18n="monthly.add_item">Adicionar item</span>
